@@ -3,7 +3,7 @@ from typing import List
 from app.models.monitor_entities import MonitorArticle, MonitorArticleList
 
 
-def parse_html(html_content: str) -> MonitorArticleList:
+def parse_html(html_content: str, nums: int = -1) -> MonitorArticleList:
     """
     从 The Christian Science Monitor 的 HTML 内容中解析并提取文章列表。
 
@@ -42,5 +42,6 @@ def parse_html(html_content: str) -> MonitorArticleList:
                     image_src=image_src
                 )
             )
-
+    if nums > 0:
+        articles = articles[:nums]
     return MonitorArticleList(articles=articles)

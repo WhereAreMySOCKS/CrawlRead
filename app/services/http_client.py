@@ -64,7 +64,7 @@ async def make_request(
 
     except httpx.RequestError as e:
         return HttpFetchResult(
-            status_code=None,
+            status_code=400,
             content_type="",
             url=url,
             error=f"请求错误: {str(e)}"
@@ -72,7 +72,7 @@ async def make_request(
 
     except Exception as e:
         return HttpFetchResult(
-            status_code=None,
+            status_code=400,
             content_type="",
             url=url,
             error=f"未知错误: {str(e)}"

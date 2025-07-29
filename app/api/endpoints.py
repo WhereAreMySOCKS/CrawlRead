@@ -1,5 +1,5 @@
 from fastapi import APIRouter ,Path
-from typing import Dict, Any, Optional, Coroutine
+from typing import Dict, Optional
 
 from app.models.http_entities import WebsiteResponse
 from app.services.website_service import fetch_and_parse_website
@@ -26,3 +26,4 @@ async def fetch_and_parse_website_content(
     """
     result = await fetch_and_parse_website(website, section, timeout)
     return result
+

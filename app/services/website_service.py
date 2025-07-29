@@ -1,8 +1,8 @@
 from typing import Optional
 from app.core.config import get_website_config
-from app.models.http_entities import WebsiteResponse, HttpFetchResult, HtmlParseResult
+from app.models.http_entities import WebsiteResponse
 from app.models.monitor_entities import MonitorArticleList
-from app.services.article_extractor_service import extract_article_contents
+from app.services.article_extractor_service import ArticleExtractor
 from app.services.http_client import make_request
 from app.services.html_parser import parse_html
 
@@ -51,7 +51,7 @@ async def fetch_website_content(
         return WebsiteResponse.success_response(
             website=website,
             section=section,
-            fetch_result=fetch_result,  # 这里应该传递fetch_result而不是parse_result
+            fetch_result=fetch_result,
             parse_result=MonitorArticleList(articles=None)  # 原始获取阶段还没有解析结果
         )
 
@@ -114,14 +114,16 @@ async def fetch_and_parse_website(
 
     # 解析HTML内容
     try:
-        parsed_data = parse_html(fetch_result.content)
-        results = extract_article_contents(parsed_data)
+        article_list = parse_html(fetch_result.content,-1)
+        # await extract_article(article_list,max_concurrent=5)
+        extractor = ArticleExtractor(max_concurrent=10)
+        await extractor.extract_all(article_list)
 
         return WebsiteResponse.success_response(
             website=website,
             section=section,
             fetch_result=None,
-            parse_result=parsed_data # 解析成功则不返回原始数据
+            parse_result=article_list # 解析成功则不返回原始数据
         )
     except Exception as e:
         return WebsiteResponse.error_response(
