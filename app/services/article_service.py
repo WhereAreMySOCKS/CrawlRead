@@ -106,7 +106,14 @@ class ArticleExtractorService:
 
     def __init__(self, max_concurrent: int = 5):
         self.max_concurrent = max_concurrent
-        self.extractor = ArticleExtractor(max_concurrent=max_concurrent)
+        self.extractor = ArticleExtractor(
+        max_concurrent=3,
+        save_html=True,
+        download_images=True,
+        resize_images=False,       # 不调整图片尺寸
+        image_quality=75,          # JPEG压缩质量为75%
+        max_image_size=300*1024    # 最大文件大小为300KB
+    )
 
     async def extract_single_article_by_url(self, url: str) -> Dict[str, Any]:
         """

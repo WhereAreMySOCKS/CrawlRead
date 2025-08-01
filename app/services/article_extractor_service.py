@@ -1,30 +1,54 @@
 import asyncio
-import datetime
 import os
 import re
 from typing import List, Dict, Any, Optional
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
+
 from app.models.monitor_entities import MonitorArticleList, MonitorArticle
 from app.services.http_client import make_request
+from app.services.image_downloader import download_image
 from utils.logger_util import logger
 
 
 class ArticleExtractor:
     """
     一个用于从 The Christian Science Monitor 网站提取和清理文章内容的类。
+    支持图片下载到本地，并可控制图片质量。
     """
 
-    def __init__(self, max_concurrent: int = 5, save_html: bool = True):
+    def __init__(
+            self,
+            max_concurrent: int = 5,
+            save_html: bool = True,
+            download_images: bool = True,
+            resize_images: bool = False,  # 控制是否调整图片尺寸
+            max_image_width: int = 1200,  # 图片最大宽度(仅当resize_images=True时使用)
+            max_image_height: int = 1200,  # 图片最大高度(仅当resize_images=True时使用)
+            image_quality: int = 85,  # JPEG图片质量(1-100)
+            max_image_size: int = 500 * 1024  # 最大图片文件大小(500KB)
+    ):
         self.max_concurrent = max_concurrent
         self.save_html = save_html
+        self.download_images = download_images
+        self.resize_images = resize_images
+        self.max_image_width = max_image_width
+        self.max_image_height = max_image_height
+        self.image_quality = image_quality
+        self.max_image_size = max_image_size
+
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                           'AppleWebKit/537.36 (KHTML, like Gecko) '
                           'Chrome/91.0.4472.124 Safari/537.36'
         }
         self.base_url = "https://www.csmonitor.com/"
+        self.image_dir = os.path.join('data', 'images')
+        # 图片下载信号量，限制并发下载数量
+        self.image_semaphore = asyncio.Semaphore(10)
+        # 记录当前文章处理过程中下载的图片，避免重复下载
+        self.processed_images = set()
 
     @staticmethod
     def sanitize_filename(name: str) -> str:
@@ -34,11 +58,14 @@ class ArticleExtractor:
         # 避免文件名过长
         return name[:100]
 
-    async def extract_body_from_html(self, html_content: str) -> str:
+    async def extract_body_from_html(self, html_content: str, article_url: str = None) -> str:
         """
         从给定的HTML内容中提取、清理并格式化文章正文。
-        增强版本，支持完整的文章结构和元数据提取。
+        增强版本，支持完整的文章结构和元数据提取，以及图片下载。
         """
+        # 重置当前文章的图片处理记录
+        self.processed_images = set()
+
         soup = BeautifulSoup(html_content, 'lxml')
 
         # 提取文章元数据
@@ -90,7 +117,7 @@ class ArticleExtractor:
                 element.decompose()
 
         # 3. 提取文章主图
-        main_image_html = self._extract_main_image(soup)
+        main_image_html = await self._extract_main_image(soup, article_url)
 
         # 4. 按顺序遍历并提取所有有效的内容元素
         content_elements = article_container.find_all(['p', 'h2', 'h3', 'h4', 'figure', 'blockquote', 'ul', 'ol'],
@@ -108,59 +135,63 @@ class ArticleExtractor:
 
         processed_paragraphs = set()  # 避免重复处理段落
 
+        # 创建任务列表以并行处理元素
+        tasks = []
         for element in content_elements:
             # 跳过已处理的元素
             if id(element) in processed_paragraphs:
                 continue
 
-            # 处理段落
-            if element.name == 'p':
-                text = element.get_text(strip=True)
-                # 过滤掉空的、太短的或包含无关信息的段落
-                if (text and len(text) > 20 and
-                        "This story was reported by" not in text and
-                        "©" not in text and
-                        not text.startswith("ADVERTISEMENT") and
-                        not re.match(r'^[\s\W]*$', text)):
-                    # 处理段落中的链接
-                    processed_text = self._process_paragraph_links(element)
-                    output_html_parts.append(f"<p>{processed_text}</p>")
-                    processed_paragraphs.add(id(element))
+            processed_paragraphs.add(id(element))
 
-            # 处理各级标题
-            elif element.name in ['h2', 'h3', 'h4']:
-                text = element.get_text(strip=True)
-                if text and len(text) > 3:
-                    output_html_parts.append(f"<{element.name}>{text}</{element.name}>")
-                    processed_paragraphs.add(id(element))
+            # 创建处理任务
+            if element.name == 'figure':
+                tasks.append(self._process_figure_element(element, article_url))
+            else:
+                # 其他非图片元素直接处理
+                if element.name == 'p':
+                    text = element.get_text(strip=True)
+                    # 过滤掉空的、太短的或包含无关信息的段落
+                    if (text and len(text) > 20 and
+                            "This story was reported by" not in text and
+                            "©" not in text and
+                            not text.startswith("ADVERTISEMENT") and
+                            not re.match(r'^[\s\W]*$', text)):
+                        # 处理段落中的链接
+                        processed_text = self._process_paragraph_links(element)
+                        output_html_parts.append(f"<p>{processed_text}</p>")
 
-            # 处理引用块
-            elif element.name == 'blockquote':
-                text = element.get_text(strip=True)
-                if text:
-                    output_html_parts.append(
-                        f'<blockquote style="border-left: 4px solid #ddd; padding-left: 1em; margin: 1em 0; font-style: italic;">{text}</blockquote>')
-                    processed_paragraphs.add(id(element))
+                # 处理各级标题
+                elif element.name in ['h2', 'h3', 'h4']:
+                    text = element.get_text(strip=True)
+                    if text and len(text) > 3:
+                        output_html_parts.append(f"<{element.name}>{text}</{element.name}>")
 
-            # 处理列表
-            elif element.name in ['ul', 'ol']:
-                list_items = element.find_all('li')
-                if list_items:
-                    list_html = f"<{element.name}>"
-                    for li in list_items:
-                        li_text = li.get_text(strip=True)
-                        if li_text:
-                            list_html += f"<li>{li_text}</li>"
-                    list_html += f"</{element.name}>"
-                    output_html_parts.append(list_html)
-                    processed_paragraphs.add(id(element))
+                # 处理引用块
+                elif element.name == 'blockquote':
+                    text = element.get_text(strip=True)
+                    if text:
+                        output_html_parts.append(
+                            f'<blockquote style="border-left: 4px solid #ddd; padding-left: 1em; margin: 1em 0; font-style: italic;">{text}</blockquote>')
 
-            # 处理内容中的图片
-            elif element.name == 'figure':
-                figure_html = self._process_figure_element(element)
+                # 处理列表
+                elif element.name in ['ul', 'ol']:
+                    list_items = element.find_all('li')
+                    if list_items:
+                        list_html = f"<{element.name}>"
+                        for li in list_items:
+                            li_text = li.get_text(strip=True)
+                            if li_text:
+                                list_html += f"<li>{li_text}</li>"
+                        list_html += f"</{element.name}>"
+                        output_html_parts.append(list_html)
+
+        # 等待所有图片处理任务完成
+        if tasks:
+            figure_results = await asyncio.gather(*tasks)
+            for figure_html in figure_results:
                 if figure_html:
                     output_html_parts.append(figure_html)
-                    processed_paragraphs.add(id(element))
 
         if not output_html_parts or (len(output_html_parts) <= 2 and main_image_html):
             logger.warning("虽然找到了容器，但未能提取任何有效的正文内容")
@@ -262,15 +293,15 @@ class ArticleExtractor:
 
         return ''.join(header_parts)
 
-    def _extract_main_image(self, soup: BeautifulSoup) -> Optional[str]:
+    async def _extract_main_image(self, soup: BeautifulSoup, article_url: Optional[str] = None) -> Optional[str]:
         """提取文章主图"""
         main_media = soup.find('div', id='main-media')
         if main_media:
-            return self._process_figure_element(main_media)
+            return await self._process_figure_element(main_media, article_url)
         return None
 
-    def _process_figure_element(self, element: Tag) -> Optional[str]:
-        """处理图片元素"""
+    async def _process_figure_element(self, element: Tag, article_url: Optional[str] = None) -> Optional[str]:
+        """处理图片元素，下载图片并返回更新了本地路径的HTML"""
         img_tag = element.find('img')
         if not img_tag:
             return None
@@ -291,7 +322,8 @@ class ArticleExtractor:
         if src.startswith('//'):
             src = 'https:' + src
         elif not src.startswith('http'):
-            src = urljoin(self.base_url, src)
+            base_url = article_url or self.base_url
+            src = urljoin(base_url, src)
 
         alt = img_tag.get('alt', 'Article image')
 
@@ -333,10 +365,36 @@ class ArticleExtractor:
 
         caption_html = ' '.join(full_caption) if full_caption else ''
 
+        # 下载图片
+        local_image_path = src  # 默认使用原始URL
+        if self.download_images and src not in self.processed_images:
+            async with self.image_semaphore:
+                try:
+                    self.processed_images.add(src)  # 标记为已处理
+                    success, result = await download_image(
+                        src,
+                        self.image_dir,
+                        resize_image=self.resize_images,
+                        max_width=self.max_image_width,
+                        max_height=self.max_image_height,
+                        quality=self.image_quality,
+                        max_file_size=self.max_image_size
+                    )
+                    if success:
+                        # 将绝对路径转换为相对路径
+                        relative_path = os.path.relpath(result, os.path.join('data', 'html'))
+                        # 统一路径分隔符为URL样式的斜杠
+                        local_image_path = relative_path.replace('\\', '/')
+                        logger.info(f"图片下载成功: {src} -> {local_image_path}")
+                    else:
+                        logger.warning(f"图片下载失败: {src}, 原因: {result}")
+                except Exception as e:
+                    logger.error(f"图片下载过程中发生异常: {src}, 错误: {str(e)}")
+
         # 生成图片HTML
         figure_html = (
             '<figure style="text-align: center; margin: 1.5em 0; background: #f8f9fa; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">'
-            f'<img src="{src}" alt="{alt}" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />'
+            f'<img src="{local_image_path}" alt="{alt}" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />'
         )
 
         if caption_html:
@@ -459,7 +517,7 @@ class ArticleExtractor:
                     'success': False
                 }
 
-            extracted_body = await self.extract_body_from_html(fetch_result.content)
+            extracted_body = await self.extract_body_from_html(fetch_result.content, article.url)
             logger.info(f"提取成功: {article.title}")
             return {
                 'url': article.url,
@@ -474,7 +532,7 @@ class ArticleExtractor:
             return {
                 'url': article.url,
                 'title': getattr(article, 'title', ''),
-                'content': self._create_html_document(error_msg),
+                'content': self._create_html_document(f"处理过程中发生异常: {e}"),
                 'success': False
             }
 
