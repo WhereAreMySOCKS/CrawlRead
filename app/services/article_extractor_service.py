@@ -3,7 +3,7 @@ import datetime
 import os
 import re
 from typing import List, Dict, Any, Optional
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 from app.models.monitor_entities import MonitorArticleList, MonitorArticle
@@ -493,17 +493,21 @@ class ArticleExtractor:
                 if self.save_html and result.get('success'):
                     # 使用文章标题作为文件名
                     fname = self.sanitize_filename(result['title'] or 'untitled_article') + ".html"
-                    # 按日期创建文件夹
-                    save_dir = os.path.join('data', 'html', datetime.datetime.now().strftime("%Y-%m-%d"))
+                    # 确保data/html目录存在
+                    save_dir = os.path.join('data', 'html')
                     os.makedirs(save_dir, exist_ok=True)
                     save_path = os.path.join(save_dir, fname)
 
-                    try:
-                        with open(save_path, 'w', encoding='utf-8') as f:
-                            f.write(result['content'])
-                        logger.info(f"HTML 已保存至: {save_path}")
-                    except Exception as e:
-                        logger.warning(f"保存 HTML 文件失败: {save_path} - {e}")
+                    # 检查文件是否已存在，如果存在则跳过而不覆盖
+                    if os.path.exists(save_path):
+                        logger.info(f"文件已存在，跳过保存: {save_path}")
+                    else:
+                        try:
+                            with open(save_path, 'w', encoding='utf-8') as f:
+                                f.write(result['content'])
+                            logger.info(f"HTML 已保存至: {save_path}")
+                        except Exception as e:
+                            logger.warning(f"保存 HTML 文件失败: {save_path} - {e}")
                 return result
 
         tasks = [extract_with_semaphore(article) for article in article_list.articles]
@@ -513,7 +517,7 @@ class ArticleExtractor:
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 article = article_list.articles[i]
-                logger.error(f"处理文章 {article.url} 时发生致命异常", exc_info=result)
+                logger.error(f"处理文章 {article.url} 时发生异常", exc_info=result)
                 processed_results.append({
                     'url': article.url,
                     'title': getattr(article, 'title', ''),

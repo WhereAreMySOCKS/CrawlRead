@@ -1,15 +1,14 @@
 import httpx
-from typing import Dict, Any, Optional
+from typing import Dict,Optional
 
-from app.models.http_entities import HttpFetchResult
-
+from app.models.http_entities import FetchResult
 
 async def make_request(
         url: str,
         headers: Optional[Dict[str, str]] = None,
         cookies: Optional[Dict[str, str]] = None,
         timeout: Optional[int] = None
-) -> HttpFetchResult:
+) -> FetchResult:
     """
     发送HTTP GET请求并返回响应内容
 
@@ -20,7 +19,7 @@ async def make_request(
         timeout: 请求超时时间（秒），默认为30秒
 
     Returns:
-        HttpFetchResult: 包含响应信息的实体
+        FetchResult: 包含响应信息的实体
     """
     try:
         # 设置默认超时时间为30秒
@@ -43,7 +42,7 @@ async def make_request(
             except:
                 content = response.text
 
-            return HttpFetchResult(
+            return FetchResult(
                 status_code=response.status_code,
                 content_type=response.headers.get("content-type", ""),
                 url=url,
@@ -53,7 +52,7 @@ async def make_request(
             )
 
     except httpx.HTTPStatusError as e:
-        return HttpFetchResult(
+        return FetchResult(
             status_code=e.response.status_code,
             content_type=e.response.headers.get("content-type", ""),
             url=url,
@@ -63,7 +62,7 @@ async def make_request(
         )
 
     except httpx.RequestError as e:
-        return HttpFetchResult(
+        return FetchResult(
             status_code=400,
             content_type="",
             url=url,
@@ -71,7 +70,7 @@ async def make_request(
         )
 
     except Exception as e:
-        return HttpFetchResult(
+        return FetchResult(
             status_code=400,
             content_type="",
             url=url,
