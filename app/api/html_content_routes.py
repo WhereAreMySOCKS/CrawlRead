@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-import os
+import hashlib
 
 from app.services.html_content_service import HTMLContentService
 
@@ -10,45 +9,61 @@ router = APIRouter(
     tags=["articles"],
 )
 
-# 创建服务实例
 html_service = HTMLContentService()
+
+
+def generate_article_id(filename: str) -> str:
+    """根据文件名生成唯一的文章ID"""
+    return hashlib.md5(filename.encode('utf-8')).hexdigest()[:12]
 
 
 @router.get("/", response_class=JSONResponse)
 async def list_articles():
     """获取所有已保存的文章列表"""
     articles = html_service.list_articles()
-    return {"articles": articles, "count": len(articles)}
+    # 为每篇文章添加ID
+    articles_with_id = []
+    for article in articles:
+        article_data = {
+            "id": generate_article_id(article["filename"]),
+            "filename": article["filename"],
+            "title": article.get("title", ""),
+            "created_at": article.get("created_at", "")
+        }
+        articles_with_id.append(article_data)
+
+    return {"articles": articles_with_id, "count": len(articles_with_id)}
 
 
-@router.get("/view/{filename}", response_class=HTMLResponse)
-async def view_article(filename: str):
-    """直接查看HTML文章内容"""
-    # 安全检查，防止目录遍历攻击
-    if "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=400, detail="文件名无效")
+@router.get("/view/{article_id}", response_class=HTMLResponse)
+async def view_article_by_id(article_id: str):
+    """通过文章ID查看HTML文章内容"""
+    # 根据ID找到对应的文件名
+    articles = html_service.list_articles()
+    filename = None
 
-    # 确保文件名以.html结尾
-    if not filename.endswith('.html'):
-        filename += '.html'
+    for article in articles:
+        if generate_article_id(article["filename"]) == article_id:
+            filename = article["filename"]
+            break
+
+    if not filename:
+        raise HTTPException(status_code=404, detail="文章未找到")
 
     content = html_service.get_article_content(filename)
     if not content:
-        raise HTTPException(status_code=404, detail="文章未找到")
+        raise HTTPException(status_code=404, detail="文章内容读取失败")
 
     return content
 
 
-@router.get("/exists/{filename}")
-async def check_article_exists(filename: str):
-    """检查文章是否存在"""
-    # 安全检查
-    if "/" in filename or "\\" in filename:
-        raise HTTPException(status_code=400, detail="文件名无效")
+@router.get("/exists/{article_id}")
+async def check_article_exists_by_id(article_id: str):
+    """通过文章ID检查文章是否存在"""
+    articles = html_service.list_articles()
 
-    # 确保文件名以.html结尾
-    if not filename.endswith('.html'):
-        filename += '.html'
+    for article in articles:
+        if generate_article_id(article["filename"]) == article_id:
+            return {"exists": True, "article_id": article_id, "filename": article["filename"]}
 
-    exists = html_service.article_exists(filename)
-    return {"exists": exists, "filename": filename}
+    return {"exists": False, "article_id": article_id}

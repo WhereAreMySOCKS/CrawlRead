@@ -1,0 +1,11 @@
+<figure style="text-align: center; margin: 1.5em 0; background: #f8f9fa; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    <div style="background: #e9ecef; padding: 40px; border-radius: 4px; color: #6c757d; font-family: Arial, sans-serif;">
+        📷 图片暂无法显示<br>
+        <small style="font-size: 0.8em; margin-top: 5px; display: block;">{{ alt }}</small>
+    </div>
+    {% if caption %}
+    <figcaption style="font-style: italic; color: #666; text-align: center; margin-top: 10px; font-size: 0.9em;">
+        {{ caption }}
+    </figcaption>
+    {% endif %}
+</figure>

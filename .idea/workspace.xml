@@ -4,15 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b4fd494c-9707-4e77-bb90-686cc5e3b87f" name="更改" comment="实现文章及配图提取">
+    <list default="true" id="b4fd494c-9707-4e77-bb90-686cc5e3b87f" name="更改" comment="优化了硬编码问题">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/endpoints.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/core/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/core/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/http_entities.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/http_entities.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/monitor_entities.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/monitor_entities.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/article_extractor_service.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/http_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/http_client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/website_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/website_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/html_content_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/html_content_routes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/article_extractor_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article_extractor_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/article_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/image_downloader.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/image_downloader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/template_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/template_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -168,7 +166,7 @@
       <updated>1753750046952</updated>
       <workItem from="1753750049048" duration="596000" />
       <workItem from="1753768206734" duration="12031000" />
-      <workItem from="1754009211392" duration="14186000" />
+      <workItem from="1754009211392" duration="33441000" />
     </task>
     <task id="LOCAL-00001" summary="实现文章及配图提取">
       <option name="closed" value="true" />
@@ -178,29 +176,78 @@
       <option name="project" value="LOCAL" />
       <updated>1753783378561</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="重构代码 实现了定时器">
+      <option name="closed" value="true" />
+      <created>1754037610067</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1754037610067</updated>
+    </task>
+    <task id="LOCAL-00003" summary="实现了图片下载">
+      <option name="closed" value="true" />
+      <created>1754040934265</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1754040934265</updated>
+    </task>
+    <task id="LOCAL-00004" summary="优化代码，实现html接口">
+      <option name="closed" value="true" />
+      <created>1754291769786</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1754291769786</updated>
+    </task>
+    <task id="LOCAL-00005" summary="优化了硬编码问题">
+      <option name="closed" value="true" />
+      <created>1754296398833</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1754296398833</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="实现文章及配图提取" />
-    <option name="LAST_COMMIT_MESSAGE" value="实现文章及配图提取" />
+    <MESSAGE value="重构代码 实现了定时器" />
+    <MESSAGE value="实现了图片下载" />
+    <MESSAGE value="优化代码，实现html接口" />
+    <MESSAGE value="优化了硬编码问题" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化了硬编码问题" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/app/api/endpoints.py</url>
-          <line>27</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/app/services/article_extractor_service.py</url>
-          <line>498</line>
-          <option name="timeStamp" value="7" />
-        </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/app/services/storage_service.py</url>
           <line>75</line>
@@ -212,6 +259,6 @@
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/CrawlRead$demo.coverage" NAME="demo 覆盖结果" MODIFIED="1753428647558" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/services" />
     <SUITE FILE_PATH="coverage/CrawlRead$new.coverage" NAME="new 覆盖结果" MODIFIED="1753425235026" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
-    <SUITE FILE_PATH="coverage/CrawlRead$CrawRead.coverage" NAME="CrawRead 覆盖结果" MODIFIED="1754036670473" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/CrawlRead$CrawRead.coverage" NAME="CrawRead 覆盖结果" MODIFIED="1754296194716" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
   </component>
 </project>

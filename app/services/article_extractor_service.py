@@ -49,7 +49,7 @@ class ArticleExtractor:
         self.image_dir = os.path.join('data', 'images')
         self.image_semaphore = asyncio.Semaphore(10)
         self.processed_images = set()
-        
+
         # 初始化模板服务
         self.template_service = TemplateService()
 
@@ -58,6 +58,19 @@ class ArticleExtractor:
         """清理字符串，使其成为有效的文件名。"""
         name = re.sub(r'[\\/*?:"<>|]', '_', name)
         return name[:100]
+
+    def _convert_local_path_to_web_path(self, local_path: str) -> str:
+        """
+        将本地路径转换为Web可访问路径
+
+        Args:
+            local_path: 本地文件路径，如 data/images/abc123.jpg
+
+        Returns:
+            Web可访问路径，如 /images/abc123.jpg
+        """
+        filename = os.path.basename(local_path)
+        return f"/images/{filename}"
 
     async def extract_body_from_html(self, html_content: str, article_url: str = None) -> str:
         """
@@ -134,7 +147,9 @@ class ArticleExtractor:
             for (placeholder_id, task), result in zip(placeholder_map.items(), results):
                 if isinstance(result, Exception):
                     logger.error(f"处理图片时发生异常: {result}")
-                    result_map[placeholder_id] = ""
+                    result_map[placeholder_id] = self.template_service.safe_render_image_placeholder(
+                        "图片处理异常", f"异常信息: {str(result)}"
+                    )
                 else:
                     result_map[placeholder_id] = result or ""
 
@@ -227,6 +242,9 @@ class ArticleExtractor:
 
     async def _extract_main_image(self, soup: BeautifulSoup, article_url: str) -> Optional[str]:
         """提取文章主图"""
+        if not article_url:
+            return None
+
         # 查找主图
         main_image_selectors = [
             'div.hero-image img',
@@ -238,7 +256,7 @@ class ArticleExtractor:
         for selector in main_image_selectors:
             if 'meta' in selector:
                 meta_tag = soup.find('meta', attrs={'property': 'og:image'}) or \
-                          soup.find('meta', attrs={'name': 'twitter:image'})
+                           soup.find('meta', attrs={'name': 'twitter:image'})
                 if meta_tag and meta_tag.get('content'):
                     image_url = urljoin(article_url, meta_tag['content'])
                     return await self._download_and_create_image_html(image_url, "主图")
@@ -255,6 +273,10 @@ class ArticleExtractor:
         img_tag = element.find('img')
         if not img_tag or not img_tag.get('src'):
             return ""
+
+        if not article_url:
+            logger.warning("文章URL为空，无法处理相对路径图片")
+            return self.template_service.safe_render_image_placeholder("图片无法加载", "文章URL为空")
 
         src = urljoin(article_url, img_tag['src'])
         alt = img_tag.get('alt', 'Article image')
@@ -277,7 +299,7 @@ class ArticleExtractor:
     async def _download_and_create_image_html(self, image_url: str, alt: str, caption: str = None) -> str:
         """下载图片并创建HTML"""
         if not self.download_images:
-            return self.template_service.render_figure(image_url, alt, caption)
+            return self.template_service.safe_render_figure(image_url, alt, caption)
 
         if image_url in self.processed_images:
             return ""
@@ -296,17 +318,17 @@ class ArticleExtractor:
                 )
 
             if result and result.success and result.local_path:
-                local_image_path = result.local_path
-                if os.name == 'nt':
-                    local_image_path = local_image_path.replace('\\', '/')
-                return self.template_service.render_figure(local_image_path, alt, caption)
+                # 关键修改：将本地路径转换为Web可访问路径
+                web_image_path = self._convert_local_path_to_web_path(result.local_path)
+                return self.template_service.safe_render_figure(web_image_path, alt, caption)
             else:
-                logger.warning(f"图片下载失败: {image_url}, 原因: {result}")
-                return self.template_service.render_figure(image_url, alt, caption)
+                error_msg = getattr(result, 'error_message', '未知错误') if result else '下载失败'
+                logger.warning(f"图片下载失败: {image_url}, 原因: {error_msg}")
+                return self.template_service.safe_render_image_placeholder(alt, caption)
 
         except Exception as e:
             logger.error(f"图片下载过程中发生异常: {image_url}, 错误: {str(e)}")
-            return self.template_service.render_figure(image_url, alt, caption)
+            return self.template_service.safe_render_image_placeholder(alt, f"下载异常: {str(e)}")
 
     def _process_non_figure_element(self, element: Tag) -> str:
         """处理非图片元素"""

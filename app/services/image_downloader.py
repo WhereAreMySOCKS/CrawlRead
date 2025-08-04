@@ -5,21 +5,32 @@ import re
 import hashlib
 from typing import Optional, Tuple
 from urllib.parse import urlparse
+from dataclasses import dataclass
 from utils.logger_util import logger
 from PIL import Image
 import io
 
 
+@dataclass
+class DownloadResult:
+    """图片下载结果"""
+    success: bool
+    local_path: Optional[str] = None
+    error_message: Optional[str] = None
+    file_size: Optional[int] = None
+    original_size: Optional[int] = None
+
+
 async def download_image(
         url: str,
         save_dir: str,
-        timeout: int = 15,
-        resize_image: bool = False,  # 控制是否调整图片尺寸
-        max_width: int = 1200,  # 仅当resize_image=True时使用
-        max_height: int = 1200,  # 仅当resize_image=True时使用
-        quality: int = 85,  # JPEG压缩质量(1-100)
-        max_file_size: int = 500 * 1024  # 最大文件大小限制(500KB)
-) -> Tuple[bool, str]:
+        timeout: int = 25,
+        resize: bool = False,  # 统一参数名
+        max_width: int = 1200,
+        max_height: int = 1200,
+        quality: int = 85,
+        max_file_size: int = 500 * 1024
+) -> DownloadResult:
     """
     下载图片并保存到本地目录，压缩图片质量但保持原始尺寸
 
@@ -27,17 +38,17 @@ async def download_image(
         url: 图片URL
         save_dir: 保存目录
         timeout: 请求超时时间(秒)
-        resize_image: 是否调整图片尺寸
-        max_width: 图片最大宽度(仅当resize_image=True时使用)
-        max_height: 图片最大高度(仅当resize_image=True时使用)
+        resize: 是否调整图片尺寸
+        max_width: 图片最大宽度(仅当resize=True时使用)
+        max_height: 图片最大高度(仅当resize=True时使用)
         quality: JPEG压缩质量(1-100)
         max_file_size: 最大文件大小(字节)
 
     Returns:
-        Tuple[bool, str]: (是否成功, 本地文件路径或错误信息)
+        DownloadResult: 下载结果对象
     """
     if not url or not url.strip():
-        return False, "Empty URL"
+        return DownloadResult(success=False, error_message="Empty URL")
 
     # 创建保存目录
     os.makedirs(save_dir, exist_ok=True)
@@ -58,28 +69,29 @@ async def download_image(
 
     # 如果文件已存在，直接返回路径
     if os.path.exists(filepath):
-        return True, filepath
+        file_size = os.path.getsize(filepath)
+        return DownloadResult(success=True, local_path=filepath, file_size=file_size)
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=timeout) as response:
                 if response.status != 200:
-                    return False, f"HTTP error: {response.status}"
+                    return DownloadResult(success=False, error_message=f"HTTP error: {response.status}")
 
                 # 获取图片数据
                 image_data = await response.read()
                 if not image_data:
-                    return False, "Empty response"
+                    return DownloadResult(success=False, error_message="Empty response")
 
-                original_size = len(image_data) / 1024  # KB
+                original_size = len(image_data)
 
                 # 处理图片质量
                 try:
                     # 使用PIL处理图片
                     img = Image.open(io.BytesIO(image_data))
 
-                    # 只有在resize_image=True时才调整尺寸
-                    if resize_image:
+                    # 只有在resize=True时才调整尺寸
+                    if resize:
                         width, height = img.size
                         if width > max_width or height > max_height:
                             # 计算调整比例
@@ -111,11 +123,9 @@ async def download_image(
                         img.save(output, format=save_format, optimize=True)
 
                     processed_data = output.getvalue()
-                    processed_size = len(processed_data) / 1024  # KB
 
                     # 检查处理后的文件大小
                     if len(processed_data) > max_file_size and save_format == 'JPEG':
-                        # 如果仍然超过大小限制，继续降低质量（仅对JPEG有效）
                         current_quality = quality
                         while len(processed_data) > max_file_size and current_quality > 40:
                             current_quality -= 10
@@ -124,28 +134,43 @@ async def download_image(
                             processed_data = output.getvalue()
                             logger.info(f"降低图片质量至 {current_quality}% 以减小文件大小")
 
-                            # 如果质量已经很低但仍然大于最大大小限制，就不再继续降低
                             if current_quality <= 40:
                                 break
 
-                    final_size = len(processed_data) / 1024  # KB
+                    final_size = len(processed_data)
 
                     # 保存处理后的图片
                     with open(filepath, 'wb') as f:
                         f.write(processed_data)
 
+                    compression_ratio = (1 - final_size / original_size) * 100
                     logger.info(
-                        f"图片已处理并保存: {filepath}, 原始大小: {original_size:.1f}KB, 处理后: {final_size:.1f}KB, 压缩率: {(1 - final_size / original_size) * 100:.1f}%")
-                    return True, filepath
+                        f"图片已处理并保存: {filepath}, "
+                        f"原始大小: {original_size / 1024:.1f}KB, "
+                        f"处理后: {final_size / 1024:.1f}KB, "
+                        f"压缩率: {compression_ratio:.1f}%"
+                    )
+
+                    return DownloadResult(
+                        success=True,
+                        local_path=filepath,
+                        file_size=final_size,
+                        original_size=original_size
+                    )
 
                 except Exception as e:
                     logger.warning(f"图片处理失败，使用原始图片: {str(e)}")
                     # 如果处理失败，保存原始图片
                     with open(filepath, 'wb') as f:
                         f.write(image_data)
-                    return True, filepath
+                    return DownloadResult(
+                        success=True,
+                        local_path=filepath,
+                        file_size=len(image_data),
+                        original_size=len(image_data)
+                    )
 
     except asyncio.TimeoutError:
-        return False, f"超时 {timeout}秒"
+        return DownloadResult(success=False, error_message=f"超时 {timeout}秒")
     except Exception as e:
-        return False, f"下载图片错误: {str(e)}"
+        return DownloadResult(success=False, error_message=f"下载图片错误: {str(e)}")
