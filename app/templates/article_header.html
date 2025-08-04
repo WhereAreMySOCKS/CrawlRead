@@ -1,0 +1,29 @@
+<div class="article-header">
+    {% if category %}
+    <div class="article-category">{{ category }}</div>
+    {% endif %}
+    
+    {% if title %}
+    <h1 class="article-title">{{ title }}</h1>
+    {% endif %}
+    
+    {% if summary %}
+    <div class="article-summary">{{ summary }}</div>
+    {% endif %}
+    
+    {% if author or publish_time_display or dateline %}
+    <div class="article-byline">
+        {% if author %}
+        <span class="author">{{ author }}{% if staffline %} - {{ staffline }}{% endif %}</span>
+        {% endif %}
+        
+        {% if publish_time_display %}
+        <span class="publish-time">{{ publish_time_display }}</span>
+        {% endif %}
+        
+        {% if dateline %}
+        <span class="dateline">{{ dateline }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>

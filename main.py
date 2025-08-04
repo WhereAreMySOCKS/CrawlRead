@@ -36,7 +36,8 @@ os.makedirs(os.path.join('data', 'html'), exist_ok=True)
 os.makedirs(os.path.join('data', 'images'), exist_ok=True)
 
 # 挂载静态文件服务，用于提供图片等静态资源
-app.mount("/static", StaticFiles(directory="data"), name="static")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/data", StaticFiles(directory="data"), name="data")
 
 # 设置Jinja2模板
 templates = Jinja2Templates(directory="app/templates")

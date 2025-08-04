@@ -1,0 +1,6 @@
+<figure class="article-figure">
+    <img src="{{ image_path }}" alt="{{ alt|default("Article image") }}" class="article-image">
+    {% if caption %}
+    <figcaption class="article-figcaption">{{ caption }}</figcaption>
+    {% endif %}
+</figure>

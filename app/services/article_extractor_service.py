@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup, Tag
 from app.models.monitor_entities import MonitorArticleList, MonitorArticle
 from app.services.http_client import make_request
 from app.services.image_downloader import download_image
+from app.services.template_service import TemplateService
 from utils.logger_util import logger
 
 
@@ -16,6 +17,7 @@ class ArticleExtractor:
     """
     一个用于从 The Christian Science Monitor 网站提取和清理文章内容的类。
     支持图片下载到本地，并可控制图片质量。
+    优化版本：使用模板服务分离HTML和CSS
     """
 
     def __init__(
@@ -23,11 +25,11 @@ class ArticleExtractor:
             max_concurrent: int = 5,
             save_html: bool = True,
             download_images: bool = True,
-            resize_images: bool = False,  # 控制是否调整图片尺寸
-            max_image_width: int = 1200,  # 图片最大宽度(仅当resize_images=True时使用)
-            max_image_height: int = 1200,  # 图片最大高度(仅当resize_images=True时使用)
-            image_quality: int = 85,  # JPEG图片质量(1-100)
-            max_image_size: int = 500 * 1024  # 最大图片文件大小(500KB)
+            resize_images: bool = False,
+            max_image_width: int = 1200,
+            max_image_height: int = 1200,
+            image_quality: int = 85,
+            max_image_size: int = 500 * 1024
     ):
         self.max_concurrent = max_concurrent
         self.save_html = save_html
@@ -45,58 +47,139 @@ class ArticleExtractor:
         }
         self.base_url = "https://www.csmonitor.com/"
         self.image_dir = os.path.join('data', 'images')
-        # 图片下载信号量，限制并发下载数量
         self.image_semaphore = asyncio.Semaphore(10)
-        # 记录当前文章处理过程中下载的图片，避免重复下载
         self.processed_images = set()
+        
+        # 初始化模板服务
+        self.template_service = TemplateService()
 
     @staticmethod
     def sanitize_filename(name: str) -> str:
         """清理字符串，使其成为有效的文件名。"""
-        # 移除无效字符
         name = re.sub(r'[\\/*?:"<>|]', '_', name)
-        # 避免文件名过长
         return name[:100]
 
     async def extract_body_from_html(self, html_content: str, article_url: str = None) -> str:
         """
         从给定的HTML内容中提取、清理并格式化文章正文。
-        增强版本，支持完整的文章结构和元数据提取，以及图片下载。
+        使用模板服务分离HTML和CSS
         """
-        # 重置当前文章的图片处理记录
         self.processed_images = set()
-
         soup = BeautifulSoup(html_content, 'lxml')
 
         # 提取文章元数据
         article_metadata = self._extract_article_metadata(soup)
 
-        # 1. 定位文章主容器
-        article_container = soup.find('div', class_='eza-body')
-
-        # 如果找不到主容器，尝试其他选择器
-        if not article_container:
-            alternative_selectors = [
-                'div.prem',
-                'article',
-                'div[class*="story-content"]',
-                'div[class*="article-body"]'
-            ]
-
-            for selector in alternative_selectors:
-                article_container = soup.select_one(selector)
-                if article_container:
-                    logger.info(f"使用备选选择器找到文章容器: {selector}")
-                    break
-
+        # 定位文章主容器
+        article_container = self._find_article_container(soup)
         if not article_container:
             logger.warning("在HTML中未找到任何文章正文容器")
-            return self._create_html_document(
+            return self.template_service.render_error_page(
                 "错误：在此页面未找到指定的文章正文容器。",
-                title=article_metadata.get('title', 'Error')
+                article_metadata.get('title', 'Error')
             )
 
-        # 2. 预处理：移除所有不需要的元素
+        # 预处理：移除所有不需要的元素
+        self._remove_unwanted_elements(article_container)
+
+        # 提取文章主图
+        main_image_html = await self._extract_main_image(soup, article_url)
+
+        # 按顺序遍历并提取所有有效的内容元素
+        content_elements = article_container.find_all(
+            ['p', 'h2', 'h3', 'h4', 'figure', 'blockquote', 'ul', 'ol'],
+            recursive=True
+        )
+
+        # 初始化输出列表
+        output_html_parts = []
+
+        # 添加文章头部信息
+        if article_metadata:
+            header_html = self.template_service.render_article_header(article_metadata)
+            output_html_parts.append(header_html)
+
+        # 添加主图
+        if main_image_html:
+            output_html_parts.append(main_image_html)
+
+        # 处理内容元素
+        processed_paragraphs = set()
+        placeholder_map = {}
+        placeholder_counter = 0
+
+        for element in content_elements:
+            if id(element) in processed_paragraphs:
+                continue
+            processed_paragraphs.add(id(element))
+
+            if element.name == 'figure':
+                placeholder_counter += 1
+                placeholder_id = f"PLACEHOLDER_{placeholder_counter}"
+                output_html_parts.append(placeholder_id)
+                task = self._process_figure_element(element, article_url)
+                placeholder_map[placeholder_id] = task
+            else:
+                processed_html = self._process_non_figure_element(element)
+                if processed_html:
+                    output_html_parts.append(processed_html)
+
+        # 等待所有图片处理任务完成
+        if placeholder_map:
+            logger.info(f"开始并行处理 {len(placeholder_map)} 个图片元素")
+            tasks = list(placeholder_map.values())
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            result_map = {}
+            for (placeholder_id, task), result in zip(placeholder_map.items(), results):
+                if isinstance(result, Exception):
+                    logger.error(f"处理图片时发生异常: {result}")
+                    result_map[placeholder_id] = ""
+                else:
+                    result_map[placeholder_id] = result or ""
+
+            final_output_parts = []
+            for part in output_html_parts:
+                if part in result_map:
+                    final_output_parts.append(result_map[part])
+                else:
+                    final_output_parts.append(part)
+            output_html_parts = final_output_parts
+
+        if not output_html_parts or (len(output_html_parts) <= 2 and main_image_html):
+            logger.warning("虽然找到了容器，但未能提取任何有效的正文内容")
+            return self.template_service.render_error_page(
+                "错误：未能提取任何有效的文章内容。",
+                article_metadata.get('title', 'Error')
+            )
+
+        # 组装成最终的HTML文档
+        body_content = ''.join(output_html_parts)
+        return self.template_service.render_article_template(
+            body_content,
+            article_metadata.get('title', 'Article')
+        )
+
+    def _find_article_container(self, soup: BeautifulSoup) -> Optional[Tag]:
+        """查找文章主容器"""
+        selectors = [
+            'div.eza-body',
+            'div.prem',
+            'article',
+            'div[class*="story-content"]',
+            'div[class*="article-body"]'
+        ]
+
+        for selector in selectors:
+            container = soup.select_one(selector)
+            if container:
+                if selector != 'div.eza-body':
+                    logger.info(f"使用备选选择器找到文章容器: {selector}")
+                return container
+        return None
+
+    def _remove_unwanted_elements(self, container: Tag) -> None:
+        """移除不需要的元素"""
         unwanted_selectors = [
             'aside',
             '.story-half',
@@ -113,427 +196,139 @@ class ArticleExtractor:
         ]
 
         for selector in unwanted_selectors:
-            for element in article_container.select(selector):
+            for element in container.select(selector):
                 element.decompose()
-
-        # 3. 提取文章主图
-        main_image_html = await self._extract_main_image(soup, article_url)
-
-        # 4. 按顺序遍历并提取所有有效的内容元素
-        content_elements = article_container.find_all(['p', 'h2', 'h3', 'h4', 'figure', 'blockquote', 'ul', 'ol'],
-                                                      recursive=True)
-
-        # 初始化输出列表，添加文章头部信息
-        output_html_parts = []
-
-        # 添加文章头部信息
-        if article_metadata:
-            header_html = self._create_article_header(article_metadata)
-            output_html_parts.append(header_html)
-
-        # 添加主图
-        if main_image_html:
-            output_html_parts.append(main_image_html)
-
-        processed_paragraphs = set()  # 避免重复处理段落
-
-        # 创建占位符和任务映射
-        placeholder_map = {}  # 占位符ID -> 任务
-        placeholder_counter = 0
-
-        # 遍历所有内容元素，保持原始顺序
-        for element in content_elements:
-            # 跳过已处理的元素
-            if id(element) in processed_paragraphs:
-                continue
-
-            processed_paragraphs.add(id(element))
-
-            if element.name == 'figure':
-                # 为图片元素创建占位符
-                placeholder_counter += 1
-                placeholder_id = f"PLACEHOLDER_{placeholder_counter}"
-                output_html_parts.append(placeholder_id)
-                # 创建异步任务并建立映射关系
-                task = self._process_figure_element(element, article_url)
-                placeholder_map[placeholder_id] = task
-
-            else:
-                # 其他非图片元素直接处理
-                processed_html = self._process_non_figure_element(element)
-                if processed_html:
-                    output_html_parts.append(processed_html)
-
-        # 等待所有图片处理任务完成
-        if placeholder_map:
-            logger.info(f"开始并行处理 {len(placeholder_map)} 个图片元素")
-            # 并行执行所有图片处理任务
-            tasks = list(placeholder_map.values())
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # 将结果映射回占位符
-            result_map = {}
-            for (placeholder_id, task), result in zip(placeholder_map.items(), results):
-                if isinstance(result, Exception):
-                    logger.error(f"处理图片时发生异常: {result}")
-                    result_map[placeholder_id] = ""  # 异常时用空字符串替代
-                else:
-                    result_map[placeholder_id] = result or ""
-
-            # 替换占位符为实际内容
-            final_output_parts = []
-            for part in output_html_parts:
-                if part in result_map:
-                    final_output_parts.append(result_map[part])
-                else:
-                    final_output_parts.append(part)
-            output_html_parts = final_output_parts
-
-        if not output_html_parts or (len(output_html_parts) <= 2 and main_image_html):
-            logger.warning("虽然找到了容器，但未能提取任何有效的正文内容")
-            return self._create_html_document(
-                "错误：未能提取任何有效的文章内容。",
-                title=article_metadata.get('title', 'Error')
-            )
-
-        # 5. 组装成最终的HTML文档
-        body_content = ''.join(output_html_parts)
-        return self._create_html_document(
-            body_content,
-            title=article_metadata.get('title', 'Extracted Article')
-        )
-
-    def _process_non_figure_element(self, element: Tag) -> Optional[str]:
-        """处理非图片元素，返回HTML字符串"""
-        if element.name == 'p':
-            text = element.get_text(strip=True)
-            # 过滤掉空的、太短的或包含无关信息的段落
-            if (text and len(text) > 20 and
-                    "This story was reported by" not in text and
-                    "©" not in text and
-                    not text.startswith("ADVERTISEMENT") and
-                    not re.match(r'^[\s\W]*$', text)):
-                # 处理段落中的链接
-                processed_text = self._process_paragraph_links(element)
-                return f"<p>{processed_text}</p>"
-
-        # 处理各级标题
-        elif element.name in ['h2', 'h3', 'h4']:
-            text = element.get_text(strip=True)
-            if text and len(text) > 3:
-                return f"<{element.name}>{text}</{element.name}>"
-
-        # 处理引用块
-        elif element.name == 'blockquote':
-            text = element.get_text(strip=True)
-            if text:
-                return f'<blockquote style="border-left: 4px solid #ddd; padding-left: 1em; margin: 1em 0; font-style: italic;">{text}</blockquote>'
-
-        # 处理列表
-        elif element.name in ['ul', 'ol']:
-            list_items = element.find_all('li')
-            if list_items:
-                list_html = f"<{element.name}>"
-                for li in list_items:
-                    li_text = li.get_text(strip=True)
-                    if li_text:
-                        list_html += f"<li>{li_text}</li>"
-                list_html += f"</{element.name}>"
-                return list_html
-
-        return None
 
     def _extract_article_metadata(self, soup: BeautifulSoup) -> Dict[str, str]:
         """提取文章元数据"""
         metadata = {}
 
         # 提取标题
-        title_element = soup.find('h1', id='headline') or soup.find('h1', class_='eza-title')
-        if title_element:
-            metadata['title'] = title_element.get_text().strip()
-        else:
-            # 从meta标签提取
-            title_meta = soup.find('meta', property='og:title')
-            if title_meta:
-                metadata['title'] = title_meta.get('content', '').strip()
+        title_tag = soup.find('h1') or soup.find('title')
+        if title_tag:
+            metadata['title'] = title_tag.get_text(strip=True)
 
-        # 提取作者
-        author_element = soup.find('span', class_='staff-name')
-        if author_element:
-            metadata['author'] = author_element.get_text().strip()
-
-        # 提取作者机构
-        staffline_element = soup.find('span', class_='staffline')
-        if staffline_element:
-            metadata['staffline'] = staffline_element.get_text().strip()
+        # 提取作者信息
+        author_tag = soup.find('span', class_='author') or soup.find('a', rel='author')
+        if author_tag:
+            metadata['author'] = author_tag.get_text(strip=True)
 
         # 提取发布时间
-        time_element = soup.find('time')
-        if time_element:
-            metadata['publish_time'] = time_element.get('datetime', '')
-            metadata['publish_time_display'] = time_element.get_text().strip()
-
-        # 提取地点
-        dateline = soup.find('span', id='dateline') or soup.find('span', class_='eza-dateline')
-        if dateline:
-            metadata['dateline'] = dateline.get_text().strip()
+        time_tag = soup.find('time')
+        if time_tag and time_tag.get('datetime'):
+            metadata['publish_time_display'] = time_tag.get('datetime')
 
         # 提取摘要
-        summary_div = soup.find('div', id='summary') or soup.find('div', class_='eza-summary')
-        if summary_div:
-            summary_p = summary_div.find('p')
-            if summary_p:
-                metadata['summary'] = summary_p.get_text().strip()
-
-        # 提取分类/标签
-        kicker = soup.find('span', class_='kicker') or soup.find('span', class_='story_kicker')
-        if kicker:
-            metadata['category'] = kicker.get_text().strip()
+        summary_tag = soup.find('meta', attrs={'name': 'description'})
+        if summary_tag and summary_tag.get('content'):
+            metadata['summary'] = summary_tag.get('content')
 
         return metadata
 
-    def _create_article_header(self, metadata: Dict[str, str]) -> str:
-        """创建文章头部HTML"""
-        header_parts = []
-
-        if metadata.get('category'):
-            header_parts.append(
-                f'<div class="article-category" style="color: #666; font-size: 0.9em; text-transform: uppercase; margin-bottom: 0.5em;">{metadata["category"]}</div>')
-
-        if metadata.get('title'):
-            header_parts.append(
-                f'<h1 style="color: #2a2a2a; margin: 0.5em 0; line-height: 1.2;">{metadata["title"]}</h1>')
-
-        if metadata.get('summary'):
-            header_parts.append(
-                f'<div class="article-summary" style="font-size: 1.1em; color: #555; margin: 1em 0; line-height: 1.4; font-style: italic;">{metadata["summary"]}</div>')
-
-        # 作者和时间信息
-        byline_parts = []
-        if metadata.get('author'):
-            author_text = metadata['author']
-            if metadata.get('staffline'):
-                author_text += f" - {metadata['staffline']}"
-            byline_parts.append(f'<span class="author">{author_text}</span>')
-
-        if metadata.get('publish_time_display'):
-            byline_parts.append(f'<span class="publish-time">{metadata["publish_time_display"]}</span>')
-
-        if metadata.get('dateline'):
-            byline_parts.append(f'<span class="dateline">{metadata["dateline"]}</span>')
-
-        if byline_parts:
-            byline_html = ' | '.join(byline_parts)
-            header_parts.append(
-                f'<div class="article-byline" style="color: #666; font-size: 0.9em; margin: 1em 0; padding: 0.5em 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">{byline_html}</div>')
-
-        return ''.join(header_parts)
-
-    async def _extract_main_image(self, soup: BeautifulSoup, article_url: Optional[str] = None) -> Optional[str]:
+    async def _extract_main_image(self, soup: BeautifulSoup, article_url: str) -> Optional[str]:
         """提取文章主图"""
-        main_media = soup.find('div', id='main-media')
-        if main_media:
-            return await self._process_figure_element(main_media, article_url)
+        # 查找主图
+        main_image_selectors = [
+            'div.hero-image img',
+            'div.featured-image img',
+            'meta[property="og:image"]',
+            'meta[name="twitter:image"]'
+        ]
+
+        for selector in main_image_selectors:
+            if 'meta' in selector:
+                meta_tag = soup.find('meta', attrs={'property': 'og:image'}) or \
+                          soup.find('meta', attrs={'name': 'twitter:image'})
+                if meta_tag and meta_tag.get('content'):
+                    image_url = urljoin(article_url, meta_tag['content'])
+                    return await self._download_and_create_image_html(image_url, "主图")
+            else:
+                img_tag = soup.select_one(selector)
+                if img_tag and img_tag.get('src'):
+                    image_url = urljoin(article_url, img_tag['src'])
+                    return await self._download_and_create_image_html(image_url, "主图")
+
         return None
 
-    async def _process_figure_element(self, element: Tag, article_url: Optional[str] = None) -> Optional[str]:
-        """处理图片元素，下载图片并返回更新了本地路径的HTML"""
+    async def _process_figure_element(self, element: Tag, article_url: str) -> str:
+        """处理图片元素"""
         img_tag = element.find('img')
-        if not img_tag:
-            return None
+        if not img_tag or not img_tag.get('src'):
+            return ""
 
-        # 获取图片URL
-        src = (img_tag.get('data-srcset') or
-               img_tag.get('data-src') or
-               img_tag.get('src'))
-
-        if not src:
-            return None
-
-        # 从srcset中提取第一个URL
-        if ' ' in src:
-            src = src.split(' ')[0]
-
-        # 处理URL
-        if src.startswith('//'):
-            src = 'https:' + src
-        elif not src.startswith('http'):
-            base_url = article_url or self.base_url
-            src = urljoin(base_url, src)
-
+        src = urljoin(article_url, img_tag['src'])
         alt = img_tag.get('alt', 'Article image')
 
         # 提取图片说明
-        caption_text = ""
-        caption_selectors = [
-            'div.eza-caption',
-            'figcaption',
-            '.caption-bar',
-            '.image-caption'
-        ]
+        caption = ""
+        figcaption = element.find('figcaption')
+        if figcaption:
+            caption = figcaption.get_text(strip=True)
+        else:
+            # 尝试从其他位置找说明
+            caption_candidate = element.find_next_sibling()
+            if caption_candidate and caption_candidate.name in ['p', 'div']:
+                caption_text = caption_candidate.get_text(strip=True)
+                if len(caption_text) < 200 and 'photo' in caption_text.lower():
+                    caption = caption_text
 
-        for selector in caption_selectors:
-            caption_element = element.find(selector) or element.parent.find(selector) if element.parent else None
-            if caption_element:
-                caption_text = caption_element.get_text(strip=True)
-                break
+        return await self._download_and_create_image_html(src, alt, caption)
 
-        # 提取图片来源
-        credit_text = ""
-        credit_selectors = [
-            'span.eza-credit',
-            '.image-credit',
-            '.photo-credit'
-        ]
+    async def _download_and_create_image_html(self, image_url: str, alt: str, caption: str = None) -> str:
+        """下载图片并创建HTML"""
+        if not self.download_images:
+            return self.template_service.render_figure(image_url, alt, caption)
 
-        for selector in credit_selectors:
-            credit_element = element.find(selector) or element.parent.find(selector) if element.parent else None
-            if credit_element:
-                credit_text = credit_element.get_text(strip=True)
-                break
+        if image_url in self.processed_images:
+            return ""
+        self.processed_images.add(image_url)
 
-        # 组合说明和来源
-        full_caption = []
-        if caption_text:
-            full_caption.append(caption_text)
-        if credit_text:
-            full_caption.append(f"({credit_text})")
-
-        caption_html = ' '.join(full_caption) if full_caption else ''
-
-        # 下载图片
-        local_image_path = src  # 默认使用原始URL
-        if self.download_images and src not in self.processed_images:
+        try:
             async with self.image_semaphore:
-                try:
-                    self.processed_images.add(src)  # 标记为已处理
-                    success, result = await download_image(
-                        src,
-                        self.image_dir,
-                        resize_image=self.resize_images,
-                        max_width=self.max_image_width,
-                        max_height=self.max_image_height,
-                        quality=self.image_quality,
-                        max_file_size=self.max_image_size
-                    )
-                    if success:
-                        # 将绝对路径转换为相对路径
-                        relative_path = os.path.relpath(result, os.path.join('data', 'html'))
-                        # 统一路径分隔符为URL样式的斜杠
-                        local_image_path = relative_path.replace('\\', '/')
-                        logger.info(f"图片下载成功: {src} -> {local_image_path}")
-                    else:
-                        logger.warning(f"图片下载失败: {src}, 原因: {result}")
-                except Exception as e:
-                    logger.error(f"图片下载过程中发生异常: {src}, 错误: {str(e)}")
+                result = await download_image(
+                    image_url,
+                    self.image_dir,
+                    resize=self.resize_images,
+                    max_width=self.max_image_width,
+                    max_height=self.max_image_height,
+                    quality=self.image_quality,
+                    max_file_size=self.max_image_size
+                )
 
-        # 生成图片HTML
-        figure_html = (
-            '<figure style="text-align: center; margin: 1.5em 0; background: #f8f9fa; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">'
-            f'<img src="{local_image_path}" alt="{alt}" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);" />'
-        )
+            if result and result.success and result.local_path:
+                local_image_path = result.local_path
+                if os.name == 'nt':
+                    local_image_path = local_image_path.replace('\\', '/')
+                return self.template_service.render_figure(local_image_path, alt, caption)
+            else:
+                logger.warning(f"图片下载失败: {image_url}, 原因: {result}")
+                return self.template_service.render_figure(image_url, alt, caption)
 
-        if caption_html:
-            figure_html += f'<figcaption style="font-size: 0.9em; color: #666; margin-top: 10px; line-height: 1.4; max-width: 90%; margin-left: auto; margin-right: auto;">{caption_html}</figcaption>'
+        except Exception as e:
+            logger.error(f"图片下载过程中发生异常: {image_url}, 错误: {str(e)}")
+            return self.template_service.render_figure(image_url, alt, caption)
 
-        figure_html += '</figure>'
+    def _process_non_figure_element(self, element: Tag) -> str:
+        """处理非图片元素"""
+        if not element.get_text(strip=True):
+            return ""
 
-        return figure_html
+        # 创建元素的深拷贝以避免修改原始内容
+        element_copy = element.__copy__()
 
-    def _process_paragraph_links(self, paragraph: Tag) -> str:
-        """处理段落中的链接"""
-        # 简单地返回段落的文本内容，保持链接但移除复杂的属性
-        for link in paragraph.find_all('a'):
-            href = link.get('href', '')
-            if href:
-                # 处理相对链接
-                if href.startswith('/'):
-                    href = urljoin(self.base_url, href)
-                link['href'] = href
-                # 移除不必要的属性
-                for attr in list(link.attrs.keys()):
-                    if attr not in ['href', 'title']:
-                        del link[attr]
+        # 处理链接
+        if element_copy.name == 'a':
+            href = element_copy.get('href', '')
+            if href.startswith('/'):
+                href = urljoin(self.base_url, href)
+            element_copy['href'] = href
 
-        return str(paragraph.decode_contents())
+        # 清理不必要的属性
+        for attr in list(element_copy.attrs.keys()):
+            if attr not in ['href', 'title', 'src', 'alt']:
+                del element_copy[attr]
 
-    def _create_html_document(self, body_content: str, title: str = "Article") -> str:
-        """创建一个带有样式的完整HTML文档。"""
-        style = """
-        <style>
-            body { 
-                font-family: "Georgia", "Times New Roman", serif; 
-                line-height: 1.7; 
-                padding: 20px; 
-                max-width: 800px; 
-                margin: auto; 
-                background-color: #fafafa; 
-                color: #333; 
-            }
-            h1 { 
-                color: #1a1a1a; 
-                margin: 0.5em 0; 
-                font-size: 2em; 
-                line-height: 1.2; 
-                border-bottom: 2px solid #2c5aa0; 
-                padding-bottom: 10px;
-            }
-            h2, h3, h4 { 
-                color: #2a2a2a; 
-                margin-top: 1.8em; 
-                margin-bottom: 0.5em;
-                border-bottom: 1px solid #ddd; 
-                padding-bottom: 5px;
-            }
-            h2 { font-size: 1.5em; }
-            h3 { font-size: 1.3em; }
-            h4 { font-size: 1.1em; }
-            p { 
-                margin: 1.2em 0; 
-                text-align: justify; 
-                text-indent: 1.5em;
-            }
-            .article-summary { text-indent: 0 !important; }
-            .article-byline { text-indent: 0 !important; }
-            .article-category { text-indent: 0 !important; }
-            figure { 
-                border: none; 
-                margin: 2em 0;
-            }
-            img { 
-                border: 1px solid #ddd; 
-                border-radius: 6px; 
-                padding: 4px; 
-                background: white; 
-            }
-            blockquote {
-                background: #f9f9f9;
-                border-left: 4px solid #2c5aa0;
-                margin: 1.5em 0;
-                padding: 1em 1.5em;
-                font-style: italic;
-            }
-            ul, ol {
-                margin: 1em 0;
-                padding-left: 2em;
-            }
-            li {
-                margin: 0.5em 0;
-            }
-            a {
-                color: #2c5aa0;
-                text-decoration: none;
-                border-bottom: 1px dotted #2c5aa0;
-            }
-            a:hover {
-                color: #1a3d6b;
-                border-bottom: 1px solid #1a3d6b;
-            }
-        </style>
-        """
-        return (f"<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'>"
-                f"<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
-                f"<title>{title}</title>{style}</head><body>{body_content}</body></html>")
+        return str(element_copy)
 
     async def extract_single_article(self, article: MonitorArticle, headers: Optional[Dict[str, str]] = None) -> Dict[
         str, Any]:
@@ -549,7 +344,9 @@ class ArticleExtractor:
                 return {
                     'url': article.url,
                     'title': getattr(article, 'title', ''),
-                    'content': self._create_html_document(f"错误：无法从URL获取内容。{fetch_result.error}"),
+                    'content': self.template_service.render_error_page(
+                        f"错误：无法从URL获取内容。{fetch_result.error}"
+                    ),
                     'success': False
                 }
 
@@ -568,7 +365,9 @@ class ArticleExtractor:
             return {
                 'url': article.url,
                 'title': getattr(article, 'title', ''),
-                'content': self._create_html_document(f"处理过程中发生异常: {e}"),
+                'content': self.template_service.render_error_page(
+                    f"处理过程中发生异常: {e}"
+                ),
                 'success': False
             }
 
@@ -585,14 +384,11 @@ class ArticleExtractor:
             async with semaphore:
                 result = await self.extract_single_article(article)
                 if self.save_html and result.get('success'):
-                    # 使用文章标题作为文件名
                     fname = self.sanitize_filename(result['title'] or 'untitled_article') + ".html"
-                    # 确保data/html目录存在
                     save_dir = os.path.join('data', 'html')
                     os.makedirs(save_dir, exist_ok=True)
                     save_path = os.path.join(save_dir, fname)
 
-                    # 检查文件是否已存在，如果存在则跳过而不覆盖
                     if os.path.exists(save_path):
                         logger.info(f"文件已存在，跳过保存: {save_path}")
                     else:
@@ -615,7 +411,9 @@ class ArticleExtractor:
                 processed_results.append({
                     'url': article.url,
                     'title': getattr(article, 'title', ''),
-                    'content': self._create_html_document(f"处理过程中发生异常: {result}"),
+                    'content': self.template_service.render_error_page(
+                        f"处理过程中发生异常: {result}"
+                    ),
                     'success': False
                 })
             else:
