@@ -67,10 +67,15 @@ class ArticleExtractor:
             local_path: 本地文件路径，如 data/images/abc123.jpg
 
         Returns:
-            Web可访问路径，如 /images/abc123.jpg
+            Web可访问路径，如 /data/images/abc123.jpg
         """
-        filename = os.path.basename(local_path)
-        return f"/images/{filename}"
+        # 由于挂载了 /data -> data/ 目录，直接返回以 /data 开头的路径
+        if local_path.startswith('data/'):
+            return '/' + local_path.replace('\\', '/')
+        else:
+            # 如果路径不是以 data/ 开头，提取文件名并构造路径
+            filename = os.path.basename(local_path)
+            return f"/data/images/{filename}"
 
     async def extract_body_from_html(self, html_content: str, article_url: str = None) -> str:
         """
