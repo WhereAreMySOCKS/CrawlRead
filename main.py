@@ -5,11 +5,14 @@ from fastapi.templating import Jinja2Templates
 import uvicorn
 import os
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.endpoints import router as api_router
 from app.api.scheduler_routes import router as scheduler_router
 from app.api.html_content_routes import router as html_content_router
 from app.services.schedule_service import article_scheduler
 from app.services.html_content_service import HTMLContentService
+from utils import timestamp_to_datetime
 
 
 @asynccontextmanager
@@ -31,6 +34,14 @@ app = FastAPI(
     lifespan=lifespan  # 使用新的生命周期管理器
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有源（生产环境应替换为前端域名）
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有方法（GET/POST等）
+    allow_headers=["*"],  # 允许所有请求头
+)
+
 # 创建数据目录（如果不存在）
 os.makedirs(os.path.join('data', 'html'), exist_ok=True)
 os.makedirs(os.path.join('data', 'images'), exist_ok=True)
@@ -40,6 +51,7 @@ app.mount("/data", StaticFiles(directory="data"), name="data")
 
 # 设置Jinja2模板
 templates = Jinja2Templates(directory="app/templates")
+templates.env.filters["timestamp_to_datetime"] = timestamp_to_datetime
 
 
 @app.get("/")

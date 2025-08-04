@@ -4,13 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b4fd494c-9707-4e77-bb90-686cc5e3b87f" name="更改" comment="优化了硬编码问题">
+    <list default="true" id="b4fd494c-9707-4e77-bb90-686cc5e3b87f" name="更改" comment="优化了图片路径 2.0">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/html_content_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/html_content_routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/article_extractor_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article_extractor_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/article_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/image_downloader.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/image_downloader.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/template_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/template_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/article.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/article.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -52,22 +49,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "FastAPI.CrawRead.executor": "Run",
-    "Python.demo.executor": "Run",
-    "Python.new.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;FastAPI.CrawRead.executor&quot;: &quot;Run&quot;,
+    &quot;Python.demo.executor&quot;: &quot;Run&quot;,
+    &quot;Python.new.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/utils" />
@@ -166,7 +163,8 @@
       <updated>1753750046952</updated>
       <workItem from="1753750049048" duration="596000" />
       <workItem from="1753768206734" duration="12031000" />
-      <workItem from="1754009211392" duration="33441000" />
+      <workItem from="1754009211392" duration="35719000" />
+      <workItem from="1754300965013" duration="2129000" />
     </task>
     <task id="LOCAL-00001" summary="实现文章及配图提取">
       <option name="closed" value="true" />
@@ -208,7 +206,23 @@
       <option name="project" value="LOCAL" />
       <updated>1754296398833</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="优化了图片路径">
+      <option name="closed" value="true" />
+      <created>1754298353934</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1754298353934</updated>
+    </task>
+    <task id="LOCAL-00007" summary="优化了图片路径 2.0">
+      <option name="closed" value="true" />
+      <created>1754298460119</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1754298460119</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -243,7 +257,9 @@
     <MESSAGE value="实现了图片下载" />
     <MESSAGE value="优化代码，实现html接口" />
     <MESSAGE value="优化了硬编码问题" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化了硬编码问题" />
+    <MESSAGE value="优化了图片路径" />
+    <MESSAGE value="优化了图片路径 2.0" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化了图片路径 2.0" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
