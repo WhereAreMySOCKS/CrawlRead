@@ -122,6 +122,8 @@ class ArticleExtractor:
         # 4. 按顺序遍历并提取所有有效的内容元素
         content_elements = article_container.find_all(['p', 'h2', 'h3', 'h4', 'figure', 'blockquote', 'ul', 'ol'],
                                                       recursive=True)
+
+        # 初始化输出列表，添加文章头部信息
         output_html_parts = []
 
         # 添加文章头部信息
@@ -135,8 +137,11 @@ class ArticleExtractor:
 
         processed_paragraphs = set()  # 避免重复处理段落
 
-        # 创建任务列表以并行处理元素
-        tasks = []
+        # 创建占位符和任务映射
+        placeholder_map = {}  # 占位符ID -> 任务
+        placeholder_counter = 0
+
+        # 遍历所有内容元素，保持原始顺序
         for element in content_elements:
             # 跳过已处理的元素
             if id(element) in processed_paragraphs:
@@ -144,54 +149,45 @@ class ArticleExtractor:
 
             processed_paragraphs.add(id(element))
 
-            # 创建处理任务
             if element.name == 'figure':
-                tasks.append(self._process_figure_element(element, article_url))
+                # 为图片元素创建占位符
+                placeholder_counter += 1
+                placeholder_id = f"PLACEHOLDER_{placeholder_counter}"
+                output_html_parts.append(placeholder_id)
+                # 创建异步任务并建立映射关系
+                task = self._process_figure_element(element, article_url)
+                placeholder_map[placeholder_id] = task
+
             else:
                 # 其他非图片元素直接处理
-                if element.name == 'p':
-                    text = element.get_text(strip=True)
-                    # 过滤掉空的、太短的或包含无关信息的段落
-                    if (text and len(text) > 20 and
-                            "This story was reported by" not in text and
-                            "©" not in text and
-                            not text.startswith("ADVERTISEMENT") and
-                            not re.match(r'^[\s\W]*$', text)):
-                        # 处理段落中的链接
-                        processed_text = self._process_paragraph_links(element)
-                        output_html_parts.append(f"<p>{processed_text}</p>")
-
-                # 处理各级标题
-                elif element.name in ['h2', 'h3', 'h4']:
-                    text = element.get_text(strip=True)
-                    if text and len(text) > 3:
-                        output_html_parts.append(f"<{element.name}>{text}</{element.name}>")
-
-                # 处理引用块
-                elif element.name == 'blockquote':
-                    text = element.get_text(strip=True)
-                    if text:
-                        output_html_parts.append(
-                            f'<blockquote style="border-left: 4px solid #ddd; padding-left: 1em; margin: 1em 0; font-style: italic;">{text}</blockquote>')
-
-                # 处理列表
-                elif element.name in ['ul', 'ol']:
-                    list_items = element.find_all('li')
-                    if list_items:
-                        list_html = f"<{element.name}>"
-                        for li in list_items:
-                            li_text = li.get_text(strip=True)
-                            if li_text:
-                                list_html += f"<li>{li_text}</li>"
-                        list_html += f"</{element.name}>"
-                        output_html_parts.append(list_html)
+                processed_html = self._process_non_figure_element(element)
+                if processed_html:
+                    output_html_parts.append(processed_html)
 
         # 等待所有图片处理任务完成
-        if tasks:
-            figure_results = await asyncio.gather(*tasks)
-            for figure_html in figure_results:
-                if figure_html:
-                    output_html_parts.append(figure_html)
+        if placeholder_map:
+            logger.info(f"开始并行处理 {len(placeholder_map)} 个图片元素")
+            # 并行执行所有图片处理任务
+            tasks = list(placeholder_map.values())
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # 将结果映射回占位符
+            result_map = {}
+            for (placeholder_id, task), result in zip(placeholder_map.items(), results):
+                if isinstance(result, Exception):
+                    logger.error(f"处理图片时发生异常: {result}")
+                    result_map[placeholder_id] = ""  # 异常时用空字符串替代
+                else:
+                    result_map[placeholder_id] = result or ""
+
+            # 替换占位符为实际内容
+            final_output_parts = []
+            for part in output_html_parts:
+                if part in result_map:
+                    final_output_parts.append(result_map[part])
+                else:
+                    final_output_parts.append(part)
+            output_html_parts = final_output_parts
 
         if not output_html_parts or (len(output_html_parts) <= 2 and main_image_html):
             logger.warning("虽然找到了容器，但未能提取任何有效的正文内容")
@@ -206,6 +202,46 @@ class ArticleExtractor:
             body_content,
             title=article_metadata.get('title', 'Extracted Article')
         )
+
+    def _process_non_figure_element(self, element: Tag) -> Optional[str]:
+        """处理非图片元素，返回HTML字符串"""
+        if element.name == 'p':
+            text = element.get_text(strip=True)
+            # 过滤掉空的、太短的或包含无关信息的段落
+            if (text and len(text) > 20 and
+                    "This story was reported by" not in text and
+                    "©" not in text and
+                    not text.startswith("ADVERTISEMENT") and
+                    not re.match(r'^[\s\W]*$', text)):
+                # 处理段落中的链接
+                processed_text = self._process_paragraph_links(element)
+                return f"<p>{processed_text}</p>"
+
+        # 处理各级标题
+        elif element.name in ['h2', 'h3', 'h4']:
+            text = element.get_text(strip=True)
+            if text and len(text) > 3:
+                return f"<{element.name}>{text}</{element.name}>"
+
+        # 处理引用块
+        elif element.name == 'blockquote':
+            text = element.get_text(strip=True)
+            if text:
+                return f'<blockquote style="border-left: 4px solid #ddd; padding-left: 1em; margin: 1em 0; font-style: italic;">{text}</blockquote>'
+
+        # 处理列表
+        elif element.name in ['ul', 'ol']:
+            list_items = element.find_all('li')
+            if list_items:
+                list_html = f"<{element.name}>"
+                for li in list_items:
+                    li_text = li.get_text(strip=True)
+                    if li_text:
+                        list_html += f"<li>{li_text}</li>"
+                list_html += f"</{element.name}>"
+                return list_html
+
+        return None
 
     def _extract_article_metadata(self, soup: BeautifulSoup) -> Dict[str, str]:
         """提取文章元数据"""

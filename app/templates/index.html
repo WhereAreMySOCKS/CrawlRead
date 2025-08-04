@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Saved Articles Viewer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        header {
+            background-color: #2c5aa0;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+        }
+        .article-count {
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        .article-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .article-card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .article-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .article-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c5aa0;
+        }
+        .article-meta {
+            font-size: 0.8em;
+            color: #666;
+        }
+        .article-link {
+            display: block;
+            margin-top: 15px;
+            text-align: right;
+        }
+        a {
+            color: #2c5aa0;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 50px;
+            background-color: white;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Saved Articles Viewer</h1>
+        <div class="article-count">Total Articles: {{ count }}</div>
+    </header>
+
+    {% if count > 0 %}
+    <div class="article-list">
+        {% for article in articles %}
+        <div class="article-card">
+            <div class="article-title">{{ article.title }}</div>
+            <div class="article-meta">
+                Size: {{ "{:.2f}".format(article.file_size / 1024) }} KB
+                <br>
+                Modified: {{ article.modified_time|int|timestamp_to_datetime }}
+            </div>
+            <a href="/articles/view/{{ article.filename }}" class="article-link" target="_blank">Read Article →</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h2>No articles available</h2>
+        <p>There are no saved articles to display. Please extract some articles first.</p>
+    </div>
+    {% endif %}
+</body>
+</html>
