@@ -28,7 +28,7 @@ async def list_articles():
             "id": generate_article_id(article["filename"]),
             "filename": article["filename"],
             "title": article.get("title", ""),
-            "created_at": article.get("created_at", "")
+            "formatted_date": article.get("'formatted_date'", "")
         }
         articles_with_id.append(article_data)
 
