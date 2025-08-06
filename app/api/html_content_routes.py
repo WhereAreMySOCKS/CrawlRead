@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 import hashlib
 
 from app.services.html_content_service import HTMLContentService
+from utils.utils import generate_article_id
 
 router = APIRouter(
     prefix="/articles",
@@ -10,12 +11,6 @@ router = APIRouter(
 )
 
 html_service = HTMLContentService()
-
-
-def generate_article_id(filename: str) -> str:
-    """根据文件名生成唯一的文章ID"""
-    return hashlib.md5(filename.encode('utf-8')).hexdigest()[:12]
-
 
 @router.get("/", response_class=JSONResponse)
 async def list_articles():
@@ -25,7 +20,6 @@ async def list_articles():
     articles_with_id = []
     for article in articles:
         article_data = {
-            "id": generate_article_id(article["filename"]),
             "filename": article["filename"],
             "title": article.get("title", ""),
             "formatted_date": article.get("'formatted_date'", "")
@@ -35,35 +29,42 @@ async def list_articles():
     return {"articles": articles_with_id, "count": len(articles_with_id)}
 
 
-@router.get("/view/{article_id}", response_class=HTMLResponse)
-async def view_article_by_id(article_id: str):
-    """通过文章ID查看HTML文章内容"""
-    # 根据ID找到对应的文件名
+@router.get("/view/{filename}", response_class=HTMLResponse)
+async def view_article_by_name(filename: str):
+    """通过文件名查看HTML文章内容"""
+    try:
+        # 获取所有文章
+        articles = html_service.list_articles()
+
+        # 查找匹配的文章
+        found_filename = None
+        for article in articles:
+            if article["filename"] == filename:
+                found_filename = article["filename"]
+                break
+
+        if not found_filename:
+            raise HTTPException(status_code=404, detail=f"未找到文件名为 '{filename}' 的文章")
+
+        # 获取文章内容
+        content = html_service.get_article_content(found_filename)
+        if not content:
+            raise HTTPException(status_code=404, detail="文章内容读取失败")
+
+        return content
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
+
+
+@router.get("/exists/{filename}")
+async def check_article_exists_by_article_name(filename: str):
     articles = html_service.list_articles()
-    filename = None
 
     for article in articles:
-        if generate_article_id(article["filename"]) == article_id:
-            filename = article["filename"]
-            break
+        if article["filename"] == filename:
+            return {"exists": True, "filename": filename}
 
-    if not filename:
-        raise HTTPException(status_code=404, detail="文章未找到")
-
-    content = html_service.get_article_content(filename)
-    if not content:
-        raise HTTPException(status_code=404, detail="文章内容读取失败")
-
-    return content
-
-
-@router.get("/exists/{article_id}")
-async def check_article_exists_by_id(article_id: str):
-    """通过文章ID检查文章是否存在"""
-    articles = html_service.list_articles()
-
-    for article in articles:
-        if generate_article_id(article["filename"]) == article_id:
-            return {"exists": True, "article_id": article_id, "filename": article["filename"]}
-
-    return {"exists": False, "article_id": article_id}
+    return {"exists": False, "filename": filename}

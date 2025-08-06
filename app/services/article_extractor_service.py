@@ -236,7 +236,8 @@ class ArticleExtractor:
         # 提取发布时间
         time_tag = soup.find('time')
         if time_tag and time_tag.get('datetime'):
-            metadata['publish_time_display'] = time_tag.get('datetime')
+            time = time_tag.get('datetime').split('T')[0]
+            metadata['publish_time_display'] = time
 
         # 提取摘要
         summary_tag = soup.find('meta', attrs={'name': 'description'})

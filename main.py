@@ -12,7 +12,7 @@ from app.api.scheduler_routes import router as scheduler_router
 from app.api.html_content_routes import router as html_content_router
 from app.services.schedule_service import article_scheduler
 from app.services.html_content_service import HTMLContentService
-from utils import timestamp_to_datetime
+from utils.utils import timestamp_to_datetime
 
 
 @asynccontextmanager
