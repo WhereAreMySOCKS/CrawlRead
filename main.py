@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.endpoints import router as api_router
 from app.api.scheduler_routes import router as scheduler_router
 from app.api.html_content_routes import router as html_content_router
+from app.api.external_routes import router as external_router
+
 from app.services.schedule_service import article_scheduler
 from app.services.html_content_service import HTMLContentService
 from utils.utils import timestamp_to_datetime
@@ -70,6 +72,7 @@ async def home(request: Request):
 app.include_router(api_router)
 app.include_router(scheduler_router)
 app.include_router(html_content_router)  # 添加HTML内容路由
+app.include_router(external_router)  # 添加HTML内容路由
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

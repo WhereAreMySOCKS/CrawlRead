@@ -1,3 +1,33 @@
+api:
+  baidu_translate:
+    app_id: "20220512001213099"  # 替换为实际值
+    app_key: "UjMFiynp8pMsO14rbn89"
+    api_url: "https://fanyi-api.baidu.com/api/trans/vip/translate"
+  dictionaryapi:
+    api_url: "https://api.dictionaryapi.dev/api/v2/entries/en"
+
+  Qwen:
+      api_url: "https://api.qwen.ai/v1/chat/completions"
+      api_key: "your_api_key_here"  # 替换为实际值
+
+# 调度器配置
+scheduler:
+  # 文章列表获取配置
+  article_fetch:
+    # 执行时间（凌晨2点）
+    hour: 10
+    minute: 0
+
+  # 文章处理配置
+  article_process:
+    # 间隔时间（分钟）
+    interval_minutes: 10
+
+  # 并发处理配置
+  concurrency:
+    # 最大并发数
+    max_concurrent: 3
+
 # 网站配置
 websites:
   # 定义通用的请求头配置
