@@ -59,6 +59,10 @@ class TranslationService:
             logger.exception(f"调用百度翻译失败: {e}")
             return {"success": False, "error": str(e)}
 
+    import httpx
+    import logging
+
+    logger = logging.getLogger(__name__)
 
     async def dictionaryapi_translate(self, word: str):
         try:
@@ -67,26 +71,42 @@ class TranslationService:
                 resp.raise_for_status()
                 try:
                     data = resp.json()
+                    # 处理返回数据（可能是单词列表）
+                    if isinstance(data, list):
+                        for entry in data:
+                            self._process_dictionary_entry(entry)
+                    return data
                 except ValueError:
                     logger.error("JSON 解析失败：响应不是有效的 JSON")
                     return {"error": "Invalid JSON format"}
-                return data
-
-        except httpx.HTTPStatusError as e:
-            logger.error(f"HTTP 请求失败: {e.response.status_code} - {e.response.text}")
-            return {
-                "error": "HTTP error",
-                "status_code": e.response.status_code,
-                "detail": e.response.text
-            }
-
-        except httpx.RequestError as e:
-            logger.error(f"网络请求错误: {e}")
-            return {"error": "Network error", "detail": str(e)}
-
         except Exception as e:
-            logger.exception("未知错误")
-            return {"error": "Unexpected error", "detail": str(e)}
+            logger.error(f"字典API请求失败: {str(e)}")
+            return {"error": "API request failed"}
+
+    def _process_dictionary_entry(self, entry: dict):
+        """处理单个词典条目"""
+        # 删除顶层 phonetic 字段
+        if "phonetic" in entry:
+            del entry["phonetic"]
+
+        # 处理 phonetics 数组
+        if "phonetics" in entry and isinstance(entry["phonetics"], list):
+            phonetics = entry["phonetics"]
+            selected_phonetic = None
+
+            # 查找美式发音
+            for item in phonetics:
+                audio = item.get("audio", "").lower()
+                if "us" in audio:  # 检查是否包含美式标识
+                    selected_phonetic = item
+                    break
+
+            # 没有美式则取第一个
+            if not selected_phonetic and phonetics:
+                selected_phonetic = phonetics[0]
+
+            # 更新 phonetics 数组
+            entry["phonetics"] = [selected_phonetic] if selected_phonetic else []
 
     async def translate(self, req: TranslationRequest):
         if len(req.q.split()) == 1:
