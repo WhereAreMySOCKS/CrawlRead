@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 # 配置文件路径
 CONFIG_DIR = Path(__file__).parent.parent / "config"
-CONFIG_PATH = CONFIG_DIR / "config.yaml"
+CONFIG_PATH = CONFIG_DIR / "config-dev.yaml"
 
 # 确保目录存在
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
