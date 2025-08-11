@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks
-from app.services.schedule_service import article_scheduler
+from app.services.article.schedule_service import article_scheduler
 
 router = APIRouter(prefix="/scheduler", tags=["Scheduler"])
 

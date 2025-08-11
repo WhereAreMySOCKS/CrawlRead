@@ -1,0 +1,10 @@
+{
+  "qwen-turbo-0624": {
+    "prompt": 2620,
+    "completion": 5353
+  },
+  "qwen-plus": {
+    "prompt": 0,
+    "completion": 0
+  }
+}

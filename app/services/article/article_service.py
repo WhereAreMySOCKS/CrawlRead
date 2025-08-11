@@ -1,9 +1,9 @@
 from typing import Optional, Dict, Any, List
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 from app.models.http_entities import FetchResult
 from app.models.monitor_entities import MonitorArticleList, MonitorArticle, ArticleListResponse
-from app.services.article_extractor_service import ArticleExtractor
-from app.services.html_parser import parse_html
+from app.services.article.article_extractor_service import ArticleExtractor
+from app.services.article.html_parser import parse_html
 
 
 class ArticleParserService:

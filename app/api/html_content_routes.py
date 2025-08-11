@@ -1,9 +1,7 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
-import hashlib
 
-from app.services.html_content_service import HTMLContentService
-from utils.utils import generate_article_id
+from app.services.article.html_content_service import HTMLContentService
 
 router = APIRouter(
     prefix="/articles",

@@ -1,4 +1,8 @@
-from pydantic import BaseModel,Field
+from dataclasses import dataclass
+from typing import Optional
+
+from pydantic import BaseModel
+from pydantic import Field
 
 
 class TranslationRequest(BaseModel):
@@ -11,3 +15,22 @@ class TranslationResponse(BaseModel):
     src_text: str
     dst_text: str
 
+@dataclass
+class LLMResponse:
+    content: Optional[str] = None
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    error: Optional[str] = None
+
+    def ok(self) -> bool:
+        return self.error is None
+
+
+class AnalyzeIn(BaseModel):
+    text: str
+
+
+class AnalyzeOut(BaseModel):
+    content: str | None = None
+    prompt_tokens: int = 0
+    completion_tokens: int = 0

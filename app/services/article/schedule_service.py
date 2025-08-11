@@ -1,18 +1,17 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.services.website_service import WebsiteFetchService
-from app.services.article_service import ArticleParserService, ArticleExtractorService
-from app.services.storage_service import ArticleStorageService
+from app.services.article.website_service import WebsiteFetchService
+from app.services.article.article_service import ArticleParserService, ArticleExtractorService
+from app.services.article.storage_service import ArticleStorageService
 from app.models.monitor_entities import MonitorArticle
 from app.core.config import get_all_website_sections, get_article_fetch_schedule, get_article_process_interval, \
     get_max_concurrent
-from utils.logger_util import logger
 
 
 class ArticleSchedulerService:

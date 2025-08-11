@@ -12,8 +12,8 @@ from app.api.scheduler_routes import router as scheduler_router
 from app.api.html_content_routes import router as html_content_router
 from app.api.external_routes import router as external_router
 
-from app.services.schedule_service import article_scheduler
-from app.services.html_content_service import HTMLContentService
+from app.services.article.schedule_service import article_scheduler
+from app.services.article.html_content_service import HTMLContentService
 from utils.utils import timestamp_to_datetime
 
 

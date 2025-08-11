@@ -1,10 +1,10 @@
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, Path, Query, BackgroundTasks
 from app.models.http_entities import WebsiteResponse
 from app.models.monitor_entities import ArticleListResponse, ArticleResponse
-from app.services.website_service import WebsiteFetchService
-from app.services.article_service import ArticleParserService, ArticleExtractorService
-from app.services.storage_service import ArticleStorageService
+from app.services.article.website_service import WebsiteFetchService
+from app.services.article.article_service import ArticleParserService, ArticleExtractorService
+from app.services.article.storage_service import ArticleStorageService
 
 router = APIRouter()
 

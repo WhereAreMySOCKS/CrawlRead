@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from typing import Dict, Any
 
-from app.services.html_content_service import HTMLContentService
+from app.services.article.html_content_service import HTMLContentService
 from utils.logger_util import logger
 
 

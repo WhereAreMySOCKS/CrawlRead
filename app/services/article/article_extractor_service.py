@@ -7,9 +7,9 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup, Tag
 
 from app.models.monitor_entities import MonitorArticleList, MonitorArticle
-from app.services.http_client import make_request
-from app.services.image_downloader import download_image
-from app.services.template_service import TemplateService
+from app.services.article.http_client import make_request
+from app.services.article.image_downloader import download_image
+from app.services.article.template_service import TemplateService
 from utils.logger_util import logger
 
 

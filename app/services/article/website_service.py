@@ -2,7 +2,7 @@ from typing import Optional
 from app.core.config import get_website_config
 from app.models.http_entities import WebsiteResponse
 from app.models.monitor_entities import MonitorArticleList
-from app.services.http_client import make_request
+from app.services.article.http_client import make_request
 
 
 class WebsiteFetchService:
