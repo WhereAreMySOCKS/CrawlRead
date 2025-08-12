@@ -20,12 +20,12 @@ async def process_next_article(payload: AnalyzeIn):
     根据输入文本长度自动选用 words/paragraph/fulltext 模板并调用大模型
     """
     svc = LLMTextAnalysisService()
-    resp = await svc.analyze(payload.text)
-
+    type, resp = await svc.analyze(payload.text)
     if resp.error:
         raise HTTPException(status_code=400, detail=resp.error)
 
     return AnalyzeOut(
+        type = type,
         content=resp.content,
         prompt_tokens=resp.prompt_tokens,
         completion_tokens=resp.completion_tokens,

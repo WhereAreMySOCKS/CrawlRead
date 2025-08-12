@@ -31,6 +31,7 @@ class AnalyzeIn(BaseModel):
 
 
 class AnalyzeOut(BaseModel):
+    type: str | None = None
     content: str | None = None
     prompt_tokens: int = 0
     completion_tokens: int = 0

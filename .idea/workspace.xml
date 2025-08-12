@@ -4,32 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b4fd494c-9707-4e77-bb90-686cc5e3b87f" name="更改" comment="优化翻译接口">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="b4fd494c-9707-4e77-bb90-686cc5e3b87f" name="更改" comment="新增大模型接口">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/endpoints.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/endpoints.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/external_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/external_routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/html_content_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/html_content_routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/scheduler_routes.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/scheduler_routes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/config/config.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/app/config/config.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/db/token_counter.json" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/token_counter.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/models/api_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/api_models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/article_extractor_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/article_extractor_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/article_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/article_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/html_content_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/html_content_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/html_parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/html_parser.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/http_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/http_client.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/image_downloader.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/image_downloader.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/schedule_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/schedule_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/storage_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/storage_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/template_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/template_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/translation_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/translation/translation_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/services/website_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/website_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/article.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/html/article.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/article_header.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/html/article_header.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/figure.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/html/figure.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/image_palceholder.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/html/image_palceholder.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/html/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/article/template_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/article/template_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/llm/llm_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/llm/llm_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/prompt/paragraph.j2" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/prompt/paragraph.j2" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/prompt/words.j2" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/prompt/words.j2" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,7 +55,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "FastAPI.CrawRead.executor": "Run",
+    "FastAPI.CrawRead.executor": "Debug",
     "Python.demloo.executor": "Run",
     "Python.demo.executor": "Run",
     "Python.html_content_service.executor": "Run",
@@ -142,7 +125,7 @@
       <workItem from="1754622789781" duration="15864000" />
       <workItem from="1754875076795" duration="196000" />
       <workItem from="1754875323830" duration="882000" />
-      <workItem from="1754892151948" duration="13728000" />
+      <workItem from="1754892151948" duration="28367000" />
     </task>
     <task id="LOCAL-00001" summary="实现文章及配图提取">
       <option name="closed" value="true" />
@@ -232,7 +215,23 @@
       <option name="project" value="LOCAL" />
       <updated>1754643826684</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="新增大模型接口">
+      <option name="closed" value="true" />
+      <created>1754906525291</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1754906525291</updated>
+    </task>
+    <task id="LOCAL-00013" summary="新增大模型接口">
+      <option name="closed" value="true" />
+      <created>1754906603099</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1754906603099</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -273,14 +272,26 @@
     <MESSAGE value="更新了文章存储和返回策略" />
     <MESSAGE value="实现了翻译接口" />
     <MESSAGE value="优化翻译接口" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化翻译接口" />
+    <MESSAGE value="新增大模型接口" />
+    <option name="LAST_COMMIT_MESSAGE" value="新增大模型接口" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/app/services/article/template_service.py</url>
+          <line>37</line>
+          <option name="timeStamp" value="50" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/CrawlRead$demo.coverage" NAME="demo 覆盖结果" MODIFIED="1754900438439" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/services" />
     <SUITE FILE_PATH="coverage/CrawlRead$new.coverage" NAME="new 覆盖结果" MODIFIED="1753425235026" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
     <SUITE FILE_PATH="coverage/CrawlRead$html_content_service.coverage" NAME="html_content_service 覆盖结果" MODIFIED="1754388119470" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/services" />
     <SUITE FILE_PATH="coverage/CrawlRead$llm_client.coverage" NAME="llm_client 覆盖结果" MODIFIED="1754897674144" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/services" />
-    <SUITE FILE_PATH="coverage/CrawlRead$CrawRead.coverage" NAME="CrawRead 覆盖结果" MODIFIED="1754906231084" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/CrawlRead$CrawRead.coverage" NAME="CrawRead 覆盖结果" MODIFIED="1754983685787" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/CrawlRead$storage_service.coverage" NAME="storage_service 覆盖结果" MODIFIED="1754389331150" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/services" />
     <SUITE FILE_PATH="coverage/CrawlRead$demloo.coverage" NAME="demloo 覆盖结果" MODIFIED="1754905448413" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/db" />
   </component>

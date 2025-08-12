@@ -1,6 +1,7 @@
 import re
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, Coroutine
 
+from app.models.api_models import LLMResponse
 from app.services.llm.llm_client import LLMClient, LLMResponse
 from utils.logger_util import logger
 
@@ -36,7 +37,7 @@ class LLMTextAnalysisService:
         text: str,
         history: Optional[List[Dict[str, str]]] = None,
         **openai_kwargs,
-    ) -> LLMResponse:
+    ) -> tuple[str, LLMResponse]:
         """
         text: 用户输入
         history: 可选对话历史 [{"role":"user","content":""}, ...]
@@ -51,7 +52,7 @@ class LLMTextAnalysisService:
         template = template_map[category]
         logger.info(f"[LLMTextAnalysisService] 文本类别={category}, 模板={template}")
 
-        return self.client.chat(
+        return category,self.client.chat(
             template_name=template,
             variables={"text": text},
             history=history or [],

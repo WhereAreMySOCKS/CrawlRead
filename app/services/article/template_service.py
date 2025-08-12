@@ -11,7 +11,7 @@ class TemplateService:
     将HTML和CSS从Python代码中分离出来
     """
 
-    def __init__(self, template_dir: str = "app/templates"):
+    def __init__(self, template_dir: str = "app/templates/html"):
         """
         初始化模板服务
 
