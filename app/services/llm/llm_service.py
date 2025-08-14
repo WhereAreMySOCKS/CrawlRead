@@ -1,5 +1,6 @@
 import re
 from typing import List, Dict, Optional, Any, Coroutine
+from unicodedata import category
 
 from app.models.api_models import LLMResponse
 from app.services.llm.llm_client import LLMClient, LLMResponse
@@ -35,6 +36,7 @@ class LLMTextAnalysisService:
     async def analyze(
         self,
         text: str,
+        text_category : str = None,
         history: Optional[List[Dict[str, str]]] = None,
         **openai_kwargs,
     ) -> tuple[str, LLMResponse]:
@@ -46,13 +48,14 @@ class LLMTextAnalysisService:
         template_map = {
             "words": "words.j2",
             "paragraph": "paragraph.j2",
+            "reading": "reading.j2",
         }
 
-        category = self._classify(text)
-        template = template_map[category]
-        logger.info(f"[LLMTextAnalysisService] 文本类别={category}, 模板={template}")
+        _category = self._classify(text) if text_category is None or text_category == '' else text_category
+        template = template_map[_category]
+        logger.info(f"[LLMTextAnalysisService] 文本类别={_category}, 模板={template}")
 
-        return category,self.client.chat(
+        return _category,self.client.chat(
             template_name=template,
             variables={"text": text},
             history=history or [],

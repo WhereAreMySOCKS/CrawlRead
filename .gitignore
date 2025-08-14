@@ -1,3 +1,4 @@
 /data/html
 /data/images
 /app/config
+/app/db/token_counter.json

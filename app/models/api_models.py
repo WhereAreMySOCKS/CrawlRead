@@ -28,6 +28,7 @@ class LLMResponse:
 
 class AnalyzeIn(BaseModel):
     text: str
+    text_category: str = None
 
 
 class AnalyzeOut(BaseModel):

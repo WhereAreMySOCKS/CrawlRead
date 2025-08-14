@@ -1,15 +1,43 @@
-请你根据以下英文文章生成 5 道阅读理解考察题，涵盖细节题、推断题、主旨题等题型，并给出参考答案。
-文章内容：
-{{ article }}
+Create 2 MCQs (4 options) + 1 open question based on the provided text.
 
-输出格式：
-[
-  {
-    "题型": "细节题",
-    "题目": "...",
-    "选项": ["A. ...", "B. ...", "C. ...", "D. ..."],
-    "答案": "A",
-    "解析": "..."
-  },
-  ...
-]
+MCQ Requirements:
+- Complete stem (15-25 words, parallel syntax)
+- Correct option supported by ≥2 textual evidences
+- Distractors use reversal/over-inference/detail-mismatch strategies
+
+Open Question Requirements:
+- Focus on rhetorical/structural/argumentative analysis
+- Include model answer with critical thinking dimensions
+- Specify evaluation criteria
+
+Output Format:
+{
+  "questions": [
+    {
+      "type": "multiple_choice",
+      "question": "question stem",
+      "options": ["A", "B", "C", "D"],
+      "answer": "A",
+      "analysis": {
+        "correct": "evidence and reasoning",
+        "distractors": {
+          "B": "error explanation",
+          "C": "error explanation",
+          "D": "error explanation"
+        }
+      }
+    },
+    ...(other MCQs)...
+    {
+      "type": "open_ended",
+      "question": "question stem",
+      "type_focus": "comprehension/writing/analysis",
+      "sample_answer": "concise model answer",
+      "key_points": ["point1", "point2", "point3"]
+    }
+  ]
+}
+
+Text: {{text}}
+
+
