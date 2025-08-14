@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 
@@ -14,15 +15,22 @@ html_service = HTMLContentService()
 async def list_articles():
     """获取所有已保存的文章列表"""
     articles = html_service.list_articles()
+
     # 为每篇文章添加ID
-    articles_with_id = []
-    for article in articles:
-        article_data = {
+    articles_with_id = [
+        {
             "filename": article["filename"],
             "title": article.get("title", ""),
-            "formatted_date": article.get("'formatted_date'", "")
+            "formatted_date": article.get("formatted_date", "")
         }
-        articles_with_id.append(article_data)
+        for article in articles
+    ]
+
+    # 按日期倒序排序（最新在前）
+    articles_with_id.sort(
+        key=lambda x: x["formatted_date"],
+        reverse=True
+    )
 
     return {"articles": articles_with_id, "count": len(articles_with_id)}
 

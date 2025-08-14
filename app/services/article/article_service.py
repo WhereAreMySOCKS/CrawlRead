@@ -111,7 +111,7 @@ class ArticleExtractorService:
         save_html=True,
         download_images=True,
         resize_images=False,       # 不调整图片尺寸
-        image_quality=75,          # JPEG压缩质量为75%
+        image_quality=70,          # JPEG压缩质量为75%
         max_image_size=300*1024    # 最大文件大小为300KB
     )
 

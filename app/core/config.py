@@ -79,6 +79,9 @@ def get_website_config(website: str, section: str) -> Dict[str, Any]:
         "headers": section_config.get("headers", {}),
         "cookies": section_config.get("cookies", {})
     }
+def get_max_fetch_articles() -> int:
+    """获取每次抓取的最大文章数"""
+    return CONFIG.get("scheduler", {}).get("article_fetch", {}).get("max_articles", 100)
 
 def get_all_website_sections() -> List[Dict[str, str]]:
     """获取所有网站和板块"""

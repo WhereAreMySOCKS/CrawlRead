@@ -143,6 +143,10 @@ class ArticleSchedulerService:
 
                 section_new_count = 0
 
+                # 打乱取固定数量的文章
+                article_list_response.articles.sort(key=lambda x: x.published_date, reverse=True)
+                max_articles = get_article_fetch_schedule().get("max_fetch_count", 10)
+                article_list_response.articles = article_list_response.articles[:max_articles]
                 # 将新文章添加到队列中
                 for article in article_list_response.articles:
                     if article.url not in self._processed_articles:
