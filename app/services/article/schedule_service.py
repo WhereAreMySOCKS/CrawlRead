@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime
+import random
 from typing import List
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -144,8 +145,8 @@ class ArticleSchedulerService:
                 section_new_count = 0
 
                 # 打乱取固定数量的文章
-                article_list_response.articles.sort(key=lambda x: x.published_date, reverse=True)
                 max_articles = get_article_fetch_schedule().get("max_fetch_count", 10)
+                random.shuffle(article_list_response.articles)  # 先打乱
                 article_list_response.articles = article_list_response.articles[:max_articles]
                 # 将新文章添加到队列中
                 for article in article_list_response.articles:
