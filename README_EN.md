@@ -1,11 +1,10 @@
-
 # CrawlRead - Free English Reading Tool
-<p>
-  <a href="README_EN.md">
-    <img src="https://img.shields.io/badge/English-README-blue?style=flat-square" alt="English README">
+<p align="center">
+  <a href="README.md">
+    <img src="https://img.shields.io/badge/中文-README-red?style=flat-square" alt="中文 README">
   </a>
 </p>
-A backend project designed to help npy develop the habit of reading English.
+A backend project designed to help u develop the habit of reading English.
 
 CrawlRead is based on the FastAPI framework and works seamlessly with the [React frontend](https://github.com/WhereAreMySOCKS/html-article-viewer) to periodically fetch English news articles and provide **translation, AI analysis, and question generation features**.
 
@@ -44,7 +43,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
-After starting the service, visit: http://localhost:8000
+After starting the service, visit: http://localhost:8000.
+For the best experience, use it with the [React frontend](https://github.com/WhereAreMySOCKS/html-article-viewer)
 
 ### Try It Now
 Open your browser and visit http://localhost:8000/docs to explore all available features
