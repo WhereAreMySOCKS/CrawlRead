@@ -1,5 +1,10 @@
-# CrawlRead - 免费的英语阅读工具
 
+# CrawlRead - 免费的英语阅读工具
+<p>
+  <a href="README_EN.md">
+    <img src="https://img.shields.io/badge/English-README-blue?style=flat-square" alt="English README">
+  </a>
+</p>
 一个帮助npy养成英语阅读习惯的后端项目。
 
 CrawlRead基于FastAPI框架，配合[React前端](https://github.com/WhereAreMySOCKS/html-article-viewer)完美实现了定时抓取英文新闻，并提供**翻译与AI分析、出题功能**。
