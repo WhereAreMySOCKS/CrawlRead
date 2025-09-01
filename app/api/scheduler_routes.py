@@ -53,7 +53,6 @@ async def get_scheduler_status():
         "queue_size": len(article_scheduler._article_queue),
         "processed_count": len(article_scheduler._processed_articles),
         "current_index": article_scheduler._current_index,
-        "fetching_active": article_scheduler._fetching_active,
         "next_run_time": str(article_scheduler.scheduler.get_job('daily_article_fetch').next_run_time)
             if article_scheduler.scheduler.get_job('daily_article_fetch') else None,
     }
