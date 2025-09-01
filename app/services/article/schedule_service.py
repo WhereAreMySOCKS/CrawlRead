@@ -95,6 +95,8 @@ class ArticleSchedulerService:
         if self.scheduler.running:
             self.scheduler.shutdown()
             self.log.info("文章调度器已关闭")
+        self._article_queue.clear()
+        self.log.info("任务队列已清空")
 
     async def fetch_article_list(self):
         """获取文章列表的定时任务"""
