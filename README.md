@@ -3,6 +3,8 @@
 一个帮助npy养成英语阅读习惯的后端项目。
 
 CrawlRead基于FastAPI框架，配合[React前端](https://github.com/WhereAreMySOCKS/html-article-viewer)完美实现了定时抓取英文新闻，并提供**翻译与AI分析、出题功能**。
+![image](./img/img.png)
+![image](./img/img_1.png)
 
 ## 📰 文章抓取
 
